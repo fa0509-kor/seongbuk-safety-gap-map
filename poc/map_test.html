@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>성북구 지도 PoC</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+html,body{margin:0;height:100%;font-family:'Malgun Gothic',sans-serif;color:#111}
+#map{position:absolute;left:280px;right:0;top:0;bottom:0}
+#side{position:absolute;left:0;top:0;bottom:0;width:280px;overflow:auto;box-sizing:border-box;
+padding:12px;border-right:1px solid #999;background:#fff;font-size:13px}
+h1{font-size:15px;margin:0 0 8px} li{margin:2px 0} .note{color:#555}
+</style></head><body>
+<div id="side"><h1>성북구 지도 PoC</h1>
+<div class="note">원본: AED_성북구.csv / 인코딩 utf-8-sig / 좌표계 WGS84</div>
+<p>지도 표출 20건 / 좌표 누락 0건</p>
+<b>좌표 누락 목록</b><ul><li>없음</li></ul></div>
+<div id="map"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const pts = [{"name": "행 1", "lat": 37.60077, "lon": 127.013617}, {"name": "행 2", "lat": 37.584572, "lon": 127.028466}, {"name": "행 3", "lat": 37.625206, "lon": 127.00213}, {"name": "행 4", "lat": 37.612058, "lon": 126.992035}, {"name": "행 5", "lat": 37.582873, "lon": 127.017891}, {"name": "행 6", "lat": 37.600699, "lon": 127.043147}, {"name": "행 7", "lat": 37.61501, "lon": 127.010974}, {"name": "행 8", "lat": 37.598228, "lon": 127.031485}, {"name": "행 9", "lat": 37.605097, "lon": 127.038512}, {"name": "행 10", "lat": 37.589713, "lon": 127.00575}, {"name": "행 11", "lat": 37.584922, "lon": 127.016172}, {"name": "행 12", "lat": 37.594569, "lon": 126.990966}, {"name": "행 13", "lat": 37.594569, "lon": 126.990966}, {"name": "행 14", "lat": 37.608048, "lon": 127.002616}, {"name": "행 15", "lat": 37.613605, "lon": 127.05617}, {"name": "행 16", "lat": 37.613605, "lon": 127.05617}, {"name": "행 17", "lat": 37.613605, "lon": 127.05617}, {"name": "행 18", "lat": 37.613605, "lon": 127.05617}, {"name": "행 19", "lat": 37.613605, "lon": 127.05617}, {"name": "행 20", "lat": 37.613605, "lon": 127.05617}];
+const map = L.map('map').setView([37.5894, 127.0167], 14);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'}).addTo(map);
+pts.forEach(p => L.circleMarker([p.lat, p.lon],
+  {radius: 8, color: '#b00020', fillColor: '#d32f2f', fillOpacity: 0.9, weight: 1})
+  .bindPopup(p.name).addTo(map));
+</script></body></html>
