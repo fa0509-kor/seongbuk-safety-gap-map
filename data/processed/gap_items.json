@@ -1,0 +1,642 @@
+[
+ {
+  "key": "hydrant_coord:성북-길음-3266",
+  "rule_code": "hydrant_coord",
+  "rule": "소방용수 좌표 누락·이상",
+  "name": "성북-길음-3266",
+  "address": "서울특별시 성북구 정릉로 254-2",
+  "lat": null,
+  "lon": null,
+  "reason": "성북구 범위 밖 (위도 37.04214, 경도 127.011941)"
+ },
+ {
+  "key": "hydrant_coord:성북-길음-3086",
+  "rule_code": "hydrant_coord",
+  "rule": "소방용수 좌표 누락·이상",
+  "name": "성북-길음-3086",
+  "address": "서울특별시 성북구 정릉로10가길 6-22",
+  "lat": null,
+  "lon": null,
+  "reason": "좌표 없음"
+ },
+ {
+  "key": "hydrant_coord:성북-길음-3641",
+  "rule_code": "hydrant_coord",
+  "rule": "소방용수 좌표 누락·이상",
+  "name": "성북-길음-3641",
+  "address": "서울특별시 성북구 숭인로 14",
+  "lat": null,
+  "lon": null,
+  "reason": "성북구 범위 밖 (위도 37.661761, 경도 127.023515)"
+ },
+ {
+  "key": "hydrant_coord:성북-장위-4333",
+  "rule_code": "hydrant_coord",
+  "rule": "소방용수 좌표 누락·이상",
+  "name": "성북-장위-4333",
+  "address": "서울특별시 성북구 장위로33길 31",
+  "lat": null,
+  "lon": null,
+  "reason": "성북구 범위 밖 (위도 37.606014, 경도 172.060545)"
+ },
+ {
+  "key": "hydrant_coord:성북-장위-4093",
+  "rule_code": "hydrant_coord",
+  "rule": "소방용수 좌표 누락·이상",
+  "name": "성북-장위-4093",
+  "address": "서울특별시 성북구 돌곶이로8길 65",
+  "lat": null,
+  "lon": null,
+  "reason": "좌표 없음"
+ },
+ {
+  "key": "hydrant_coord:성북-장위-4503",
+  "rule_code": "hydrant_coord",
+  "rule": "소방용수 좌표 누락·이상",
+  "name": "성북-장위-4503",
+  "address": "서울특별시 성북구 월계로40길 32",
+  "lat": null,
+  "lon": null,
+  "reason": "좌표 없음"
+ },
+ {
+  "key": "hydrant_coord:성북-장위-4498",
+  "rule_code": "hydrant_coord",
+  "rule": "소방용수 좌표 누락·이상",
+  "name": "성북-장위-4498",
+  "address": "서울특별시 성북구 돌곶이로41길 10  선약국 앞",
+  "lat": null,
+  "lon": null,
+  "reason": "좌표 없음"
+ },
+ {
+  "key": "hydrant_coord:성북-장위-4490",
+  "rule_code": "hydrant_coord",
+  "rule": "소방용수 좌표 누락·이상",
+  "name": "성북-장위-4490",
+  "address": "서울특별시 성북구 돌곶이로 152",
+  "lat": null,
+  "lon": null,
+  "reason": "좌표 없음"
+ },
+ {
+  "key": "hydrant_coord:성북-장위-4496",
+  "rule_code": "hydrant_coord",
+  "rule": "소방용수 좌표 누락·이상",
+  "name": "성북-장위-4496",
+  "address": "서울특별시 성북구 한천로74길 13-9",
+  "lat": null,
+  "lon": null,
+  "reason": "좌표 없음"
+ },
+ {
+  "key": "hydrant_coord:성북-장위-4495",
+  "rule_code": "hydrant_coord",
+  "rule": "소방용수 좌표 누락·이상",
+  "name": "성북-장위-4495",
+  "address": "서울특별시 성북구 화랑로40길 22-32",
+  "lat": null,
+  "lon": null,
+  "reason": "좌표 없음"
+ },
+ {
+  "key": "hydrant_coord:성북-장위-4501",
+  "rule_code": "hydrant_coord",
+  "rule": "소방용수 좌표 누락·이상",
+  "name": "성북-장위-4501",
+  "address": "서울특별시 성북구 한천로101가길 35",
+  "lat": null,
+  "lon": null,
+  "reason": "좌표 없음"
+ },
+ {
+  "key": "hydrant_coord:성북-장위-4032",
+  "rule_code": "hydrant_coord",
+  "rule": "소방용수 좌표 누락·이상",
+  "name": "성북-장위-4032",
+  "address": "서울특별시 성북구 한천로80길 3",
+  "lat": null,
+  "lon": null,
+  "reason": "좌표 없음"
+ },
+ {
+  "key": "hydrant_coord:성북-장위-4506",
+  "rule_code": "hydrant_coord",
+  "rule": "소방용수 좌표 누락·이상",
+  "name": "성북-장위-4506",
+  "address": "서울특별시 성북구 한천로99라길 31-20 주택 앞",
+  "lat": null,
+  "lon": null,
+  "reason": "좌표 없음"
+ },
+ {
+  "key": "hydrant_coord:성북-장위-4466",
+  "rule_code": "hydrant_coord",
+  "rule": "소방용수 좌표 누락·이상",
+  "name": "성북-장위-4466",
+  "address": "서울특별시 성북구 돌곶이로34길 20-19 수정빌리지",
+  "lat": null,
+  "lon": null,
+  "reason": "좌표 없음"
+ },
+ {
+  "key": "hydrant_coord:성북-장위-4121",
+  "rule_code": "hydrant_coord",
+  "rule": "소방용수 좌표 누락·이상",
+  "name": "성북-장위-4121",
+  "address": "서울특별시 성북구 화랑로32길 47-7",
+  "lat": null,
+  "lon": null,
+  "reason": "좌표 없음"
+ },
+ {
+  "key": "hydrant_coord:성북-장위-4124",
+  "rule_code": "hydrant_coord",
+  "rule": "소방용수 좌표 누락·이상",
+  "name": "성북-장위-4124",
+  "address": "서울특별시 성북구 돌곶이로7길 34",
+  "lat": null,
+  "lon": null,
+  "reason": "좌표 없음"
+ },
+ {
+  "key": "hydrant_coord:성북-장위-4318",
+  "rule_code": "hydrant_coord",
+  "rule": "소방용수 좌표 누락·이상",
+  "name": "성북-장위-4318",
+  "address": "서울특별시 성북구 장월로 132-8",
+  "lat": null,
+  "lon": null,
+  "reason": "좌표 없음"
+ },
+ {
+  "key": "hydrant_coord:성북-장위-4049",
+  "rule_code": "hydrant_coord",
+  "rule": "소방용수 좌표 누락·이상",
+  "name": "성북-장위-4049",
+  "address": "서울특별시 성북구 화랑로 270",
+  "lat": null,
+  "lon": null,
+  "reason": "좌표 없음"
+ },
+ {
+  "key": "hydrant_coord:성북-장위-4156",
+  "rule_code": "hydrant_coord",
+  "rule": "소방용수 좌표 누락·이상",
+  "name": "성북-장위-4156",
+  "address": "서울특별시 성북구 화랑로22가길 10",
+  "lat": null,
+  "lon": null,
+  "reason": "좌표 없음"
+ },
+ {
+  "key": "hydrant_unusable:1187",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "1187",
+  "address": "서울특별시 성북구 월곡로6길 14",
+  "lat": 37.60213405,
+  "lon": 127.0325932,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:1292",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "1292",
+  "address": "서울특별시 성북구 종암로24가길 53",
+  "lat": 37.60183914,
+  "lon": 127.038064,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:1343",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "1343",
+  "address": "서울특별시 성북구 월곡로7길 19",
+  "lat": 37.5981408,
+  "lon": 127.0385476,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:1371",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "1371",
+  "address": "서울특별시 성북구 월계로 4",
+  "lat": 37.60913823,
+  "lon": 127.0308569,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:1614",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "1614",
+  "address": "서울특별시 성북구 오패산로1길 9",
+  "lat": 37.60383543,
+  "lon": 127.0362803,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:2320",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "2320",
+  "address": "서울특별시 성북구 삼선교로4길 89",
+  "lat": 37.58394764,
+  "lon": 127.0073093,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:2358",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "2358",
+  "address": "서울특별시 성북구 삼선교로4라길 31-6",
+  "lat": 37.58030098,
+  "lon": 127.0086215,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:2359",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "2359",
+  "address": "서울특별시 성북구 삼선교로4길 186",
+  "lat": 37.58018537,
+  "lon": 127.0100817,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:2636",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "2636",
+  "address": "서울특별시 성북구 아리랑로 82  아리랑시네센터및아리랑정보도서관",
+  "lat": 37.60044545,
+  "lon": 127.0138522,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:2717",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "2717",
+  "address": "서울특별시 성북구 삼선교로4나길 16",
+  "lat": 37.58327686,
+  "lon": 127.0081241,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:3160",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "3160",
+  "address": "서울특별시 성북구 숭인로2길 14",
+  "lat": 37.61113274,
+  "lon": 127.0221499,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:3279",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "3279",
+  "address": "서울특별시 성북구 북악산로1길 118",
+  "lat": 37.59828329,
+  "lon": 127.0033929,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:3356",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "3356",
+  "address": "서울특별시 성북구 솔샘로5가길 32",
+  "lat": 37.61152437,
+  "lon": 127.0034019,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:3414",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "3414",
+  "address": "서울특별시 성북구 보국문로29나길 30",
+  "lat": 37.61453134,
+  "lon": 127.0024793,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:3494",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "3494",
+  "address": "서울특별시 성북구 솔샘로5길 62-14",
+  "lat": 37.61068988,
+  "lon": 127.0018031,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4350",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4350",
+  "address": "서울특별시 성북구 돌곶이로 106",
+  "lat": 37.61232492,
+  "lon": 127.0555012,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4360",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4360",
+  "address": "서울특별시 성북구 화랑로 239",
+  "lat": 37.61047244,
+  "lon": 127.0561232,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4381",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4381",
+  "address": "서울특별시 성북구 장월로8가길 28",
+  "lat": 37.61101743,
+  "lon": 127.0488111,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4393",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4393",
+  "address": "서울특별시 성북구 화랑로19길 77",
+  "lat": 37.60960249,
+  "lon": 127.051175,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4400",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4400",
+  "address": "서울특별시 성북구 돌곶이로 114",
+  "lat": 37.6128383,
+  "lon": 127.05495,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4446",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4446",
+  "address": "서울특별시 성북구 한천로94길 10",
+  "lat": 37.61688108,
+  "lon": 127.0573139,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4447",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4447",
+  "address": "서울특별시 성북구 한천로 662-3",
+  "lat": 37.6171292,
+  "lon": 127.0570131,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4465",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4465",
+  "address": "서울특별시 성북구 한천로88길 34-8",
+  "lat": 37.61503474,
+  "lon": 127.0608747,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4469",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4469",
+  "address": "서울특별시 성북구 월계로 160-6",
+  "lat": 37.61827822,
+  "lon": 127.043756,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4474",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4474",
+  "address": "서울특별시 성북구 한천로86가길 18",
+  "lat": 37.61518984,
+  "lon": 127.0597106,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4476",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4476",
+  "address": "서울특별시 성북구 한천로86가길 32-9",
+  "lat": 37.61553716,
+  "lon": 127.0594003,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4477",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4477",
+  "address": "서울특별시 성북구 한천로96길 82",
+  "lat": 37.61545855,
+  "lon": 127.0602072,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4478",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4478",
+  "address": "서울특별시 성북구 한천로86가길 32-1",
+  "lat": 37.61556598,
+  "lon": 127.0589927,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4479",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4479",
+  "address": "서울특별시 성북구 한천로96길 54",
+  "lat": 37.61620678,
+  "lon": 127.059227,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4480",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4480",
+  "address": "서울특별시 성북구 한천로96길 40-2",
+  "lat": 37.61659057,
+  "lon": 127.0584755,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4481",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4481",
+  "address": "서울특별시 성북구 한천로86길 13",
+  "lat": 37.61465752,
+  "lon": 127.0599595,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4482",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4482",
+  "address": "서울특별시 성북구 한천로92길 10",
+  "lat": 37.61644976,
+  "lon": 127.0577656,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4483",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4483",
+  "address": "서울특별시 성북구 한천로90길 49",
+  "lat": 37.61458732,
+  "lon": 127.0592209,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4484",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4484",
+  "address": "서울특별시 성북구 한천로90길 37",
+  "lat": 37.61525891,
+  "lon": 127.0589253,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4485",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4485",
+  "address": "서울특별시 성북구 한천로96길 8",
+  "lat": 37.61759421,
+  "lon": 127.0571291,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4487",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4487",
+  "address": "서울특별시 성북구 한천로90길 17-1",
+  "lat": 37.61593066,
+  "lon": 127.0582915,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4488",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4488",
+  "address": "서울특별시 성북구 한천로86가길 3",
+  "lat": 37.61481556,
+  "lon": 127.0605292,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4489",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4489",
+  "address": "서울특별시 성북구 한천로96길 24",
+  "lat": 37.61702982,
+  "lon": 127.0577358,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4523",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4523",
+  "address": "서울특별시 성북구 한천로84길 24-12",
+  "lat": 37.61402144,
+  "lon": 127.0616843,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4529",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4529",
+  "address": "서울특별시 성북구 화랑로41길 15",
+  "lat": 37.61384056,
+  "lon": 127.0610403,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4532",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4532",
+  "address": "서울특별시 성북구 한천로84길 22",
+  "lat": 37.61417059,
+  "lon": 127.0609795,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4535",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4535",
+  "address": "서울특별시 성북구 화랑로41길 29",
+  "lat": 37.61417663,
+  "lon": 127.0603548,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4555",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4555",
+  "address": "서울특별시 성북구 한천로101길 18",
+  "lat": 37.62374504,
+  "lon": 127.0492376,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4618",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4618",
+  "address": "서울특별시 성북구 한천로101길 66",
+  "lat": 37.62230347,
+  "lon": 127.0468354,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ },
+ {
+  "key": "hydrant_unusable:4655",
+  "rule_code": "hydrant_unusable",
+  "rule": "소방용수 사용불가 표시",
+  "name": "4655",
+  "address": "서울특별시 성북구 돌곶이로30가길 13",
+  "lat": 37.61334232,
+  "lon": 127.0547101,
+  "reason": "사용불가 표시: 사용가능여부 N (기준일 2022-06-30)"
+ }
+]

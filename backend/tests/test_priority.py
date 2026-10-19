@@ -1,0 +1,80 @@
+"""우선순위 점수 v1, 공백 항목 적재, 집계 API."""
+from datetime import datetime, timedelta, timezone
+
+from fastapi.testclient import TestClient
+
+from backend.app import scoring
+from backend.app.db import SessionLocal
+from backend.app.main import app
+from backend.app.models import Report
+from backend.app.seed import seed_gap_items
+
+from .test_api import upload
+
+client = TestClient(app)
+FAR = (37.0, 127.5)  # 성북구 밖, 어떤 보호구역과도 멂
+
+
+def make(lat, lon, **extra):
+    p = upload()
+    return client.post("/api/reports", json={"photo_key": p["key"], "lat": lat, "lon": lon, **extra}).json()
+
+
+def admin_item(public_id):
+    return next(x for x in client.get("/api/admin/reports").json() if x["public_id"] == public_id)
+
+
+def test_gap_items_seeded_once():
+    gaps = client.get("/api/admin/reports", params={"source": "gap"}).json()
+    assert len(gaps) == 64
+    assert {g["gap_rule"] for g in gaps} == {"소방용수 사용불가 표시", "소방용수 좌표 누락·이상"}
+    assert seed_gap_items() == 0  # 다시 불러도 중복 없음
+    unusable = next(g for g in gaps if g["gap_rule"] == "소방용수 사용불가 표시")
+    assert unusable["priority"]["total"] == scoring.GAP_POINTS["hydrant_unusable"]  # 보호구역 가산 없음
+    assert unusable["priority"]["due_at"] is None  # 공백 후보는 기한 없음
+
+
+def test_school_zone_bonus_and_breakdown():
+    lat, lon, _ = scoring.school_zones()[0]
+    near = admin_item(make(lat + 0.0005, lon)["public_id"])  # 약 55m
+    far = admin_item(make(*FAR)["public_id"])
+    base = scoring.TYPE_POINTS["콘크리트 균열"]  # Mock 분류 결과
+    assert far["priority"]["total"] == base
+    assert near["priority"]["total"] == base + scoring.SCHOOL_ZONE_POINTS
+    labels = [i["label"] for i in near["priority"]["items"]]
+    assert "어린이보호구역 인접" in labels and "관리목록 밖" in labels
+
+
+def test_resident_report_outranks_gap_candidates():
+    """시연: 새 주민 제보(균열 20점)가 공백 후보(최대 25점) 아래로 묻히지 않아야 함 — 보호구역 근처면 50점"""
+    lat, lon, _ = scoring.school_zones()[0]
+    pid = make(lat, lon)["public_id"]
+    top = client.get("/api/admin/reports", params={"status": "received"}).json()[0]
+    assert top["public_id"] == pid or top["priority"]["total"] >= 50
+
+
+def test_priority_sort_and_false_positive():
+    rows = client.get("/api/admin/reports").json()
+    totals = [r["priority"]["total"] for r in rows]
+    assert totals == sorted(totals, reverse=True)
+    item = admin_item(make(*FAR)["public_id"])
+    d = client.patch(f"/api/admin/reports/{item['id']}", json={"false_positive": True}).json()
+    assert d["priority"]["total"] == 0 and d["priority"]["overdue"] is False
+
+
+def test_overdue_and_summary():
+    item = admin_item(make(*FAR)["public_id"])
+    with SessionLocal() as db:  # 접수 10일 전으로 돌려 기한(7일) 초과 만들기
+        r = db.get(Report, item["id"])
+        r.created_at = datetime.now(timezone.utc) - timedelta(days=10)
+        db.commit()
+    assert admin_item(item["public_id"])["priority"]["overdue"] is True
+
+    done = admin_item(make(*FAR)["public_id"])
+    client.patch(f"/api/admin/reports/{done['id']}", json={"status": "done"})
+    s = client.get("/api/admin/summary").json()
+    assert s["overdue_open"] >= 1 and s["done_this_month"] >= 1 and s["avg_days_to_done"] is not None
+    assert s["today_new"] >= 1 and s["open_by_status"]["received"] >= 64
+
+    st = client.get("/api/stats").json()
+    assert st["week_reports"] >= 1 and st["week_done"] >= 1
