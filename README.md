@@ -5,7 +5,7 @@
 
 ## 폴더
 - `poc/` 사전 검증 스크립트와 결과 (데이터 읽기, 공백 탐지 규칙, 사진 분류 호출 시험)
-- `data/` 데이터 설명(`README.md`)과 규칙 결과(`gap_candidates.csv`). 원본(`data/raw/`)은 올리지 않음
+- `data/` 데이터 설명(`README.md`)과 규칙 결과(`gap_candidates.csv`). 공공데이터 원본(`data/raw/`, AI-Hub 파일 제외)
 - `backend/`, `frontend/` 본 개발 폴더 (아직 비어 있음)
 
 ## 데이터
