@@ -31,7 +31,7 @@
 ## raw/AED_성북구.csv
 - 출처: 국립중앙의료원 전국 자동심장충격기(AED) 정보 조회 서비스, `getEgytAedManageInfoInqire` (시도 서울특별시, 시군구 성북구). 2026-10-19 `poc/fetch_aed.py`로 호출
 - 515행. 좌표는 wgs84Lat/wgs84Lon
-- 담당자 이름·전화 열(manager, managerTel, clerkTel)이 들어 있음. 개인정보이므로 화면·문서·팀 공유에 쓰지 않음
+- 응답에 담당자 이름·전화 열(manager, managerTel, clerkTel)이 있으나 개인정보라 저장하지 않음 (`poc/fetch_aed.py`가 지우고 저장)
 - 인증키는 프로젝트 루트 `.env`의 DATA_GO_KR_AED_KEY. `.env`는 `.gitignore`에 들어 있음. 키는 채팅·문서에 붙여 넣지 않음
 
 ## gap_candidates.csv (poc/gap_rules.py 결과, 2026-10-19)

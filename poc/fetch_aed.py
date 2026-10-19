@@ -60,6 +60,8 @@ def main() -> None:
     if not rows:
         sys.exit("받은 행이 없음. 상태: " + status)
     df = pd.DataFrame(rows)
+    # 담당자 이름·전화번호는 개인정보라 저장하지 않음
+    df = df.drop(columns=[c for c in ("manager", "managerTel", "clerkTel") if c in df.columns])
     OUT.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(OUT, index=False, encoding="utf-8-sig")
     print(f"저장: {OUT} ({len(df)}행) 열: {list(df.columns)}")
