@@ -3,6 +3,9 @@
 규칙 1  소방용수시설 좌표 누락·이상 (좌표 없음, 0, 성북구 범위 밖)
 규칙 2  같은 도로명주소에 서로 다른 종류의 안전시설이 겹침 (소방용수, 무더위쉼터, AED, 어린이보호구역)
 규칙 3  보호구역 경계 밖은 경계(면) 데이터가 없어 이 스크립트에서 계산하지 않음
+        (대신 보호구역 지정 범위인 시설 반경 300m를 우선순위 점수에 씀: backend/app/scoring.py)
+규칙 5  소방용수 거리 기준: 어린이 시설·무더위쉼터에서 사용 가능한 소방용수까지 100m 초과
+        (소방기본법 시행규칙 별표3: 주거·상업·공업지역 수평거리 100m 이하, 그 외 140m 이하)
 
 실행: python poc/gap_rules.py   (data/raw 의 4개 파일이 필요)
 출력: data/gap_candidates.csv, poc/gap_map.html
@@ -110,6 +113,57 @@ def rule4(raw: pd.DataFrame) -> pd.DataFrame:
                      "주소": last["소재지도로명주소"], "lat": last["lat"], "lon": last["lon"],
                      "사유": f"{kind}: {why}", "세부": kind})
     return pd.DataFrame(rows)
+
+
+HYDRANT_DIST_URBAN_M = 100   # 소방기본법 시행규칙 별표3 1.가 (주거·상업·공업지역)
+HYDRANT_DIST_OTHER_M = 140   # 같은 별표 1.나 (그 외 지역)
+# 아파트 단지 추정 (이름·주소 글자로만 판단하므로 추정임)
+APT_RE = re.compile(r"\(아\)|아파트|단지|뉴타운|\d+동\)|래미안|푸르지오|e편한세상|힐스테이트|아이파크|위브|자이|롯데캐슬|센트레빌")
+
+
+def _haversine_m(lat, lon, lats, lons):
+    import numpy as np
+    p1, p2 = np.radians(lat), np.radians(lats)
+    a = np.sin((p2 - p1) / 2) ** 2 + np.cos(p1) * np.cos(p2) * np.sin(np.radians(lons - lon) / 2) ** 2
+    return 2 * 6_371_000 * np.arcsin(np.sqrt(a))
+
+
+def rule5(d: dict[str, pd.DataFrame], fw_raw: pd.DataFrame) -> pd.DataFrame:
+    """어린이보호구역 대상 시설·무더위쉼터에서 가장 가까운 '사용 가능' 소방용수가 100m를 넘는 곳.
+    - 사용 가능: 가장 최근 기록의 사용가능여부가 N이 아닌 것 (기록이 비어 있으면 사용 가능으로 봄 → 보수적으로 덜 잡힘)
+    - 용도지역을 모르므로 100m 초과는 '기준 초과 의심', 140m 초과는 어느 지역이든 기준 초과로 구분
+    - 시설 좌표는 건물 대표점이라 실제 건물 끝과의 거리와 다를 수 있음 → 점검 후보일 뿐
+    - 아파트 단지 안 옥외소화전은 공공 소방용수 데이터에 없음 → 아파트 항목은 따로 표시"""
+    import numpy as np
+    raw = fw_raw.copy()
+    raw["상태"] = raw["사용가능여부"].astype(str).str.strip().replace({"nan": ""})
+    raw["lat"] = pd.to_numeric(raw["위도"], errors="coerce")
+    raw["lon"] = pd.to_numeric(raw["경도"], errors="coerce")
+    rows = []
+    for sid, g in raw.sort_values("기준일").groupby("시설번호"):
+        known = g[g["상태"] != ""]
+        rows.append({"lat": g["lat"].iloc[-1], "lon": g["lon"].iloc[-1],
+                     "상태": known["상태"].iloc[-1] if len(known) else ""})
+    h = pd.DataFrame(rows)
+    s, n, w, e = BOX
+    h = h[(h["상태"] != "N") & h["lat"].between(s, n) & h["lon"].between(w, e)]
+    hl, ho = h["lat"].to_numpy(), h["lon"].to_numpy()
+
+    out = []
+    for kind in ("어린이보호구역", "무더위쉼터"):
+        for r in d[kind].itertuples():
+            if not (r.lat == r.lat and r.lon == r.lon):
+                continue
+            dist = float(np.min(_haversine_m(r.lat, r.lon, hl, ho)))
+            if dist > HYDRANT_DIST_URBAN_M:
+                level = "140m 초과" if dist > HYDRANT_DIST_OTHER_M else "100~140m"
+                # 아파트 단지 안 옥외소화전(건물 소방시설)은 공공 소방용수 데이터에 없어 실제로는 기준을 채울 수 있음
+                apt = bool(APT_RE.search(f"{r.이름} {r.주소}"))
+                note = " · 아파트 단지 안 옥외소화전은 이 데이터에 없음 (현장 확인)" if apt else ""
+                out.append({"규칙": "소방용수 거리 기준 초과 의심", "종류": kind, "이름": r.이름, "주소": r.주소,
+                            "lat": r.lat, "lon": r.lon, "거리": round(dist), "단계": level, "아파트": apt,
+                            "사유": f"가장 가까운 사용 가능 소방용수 {dist:.0f}m (기준 100m, 주거·상업·공업지역 외 140m){note}"})
+    return pd.DataFrame(out)
 
 
 def build_html(points: list[dict], summary: str) -> str:

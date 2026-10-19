@@ -6,12 +6,12 @@
 
 만드는 파일
 - facilities.geojson : 안전시설 위치. properties: kind, name, address
-- gaps.geojson       : 주민 지도 '점검 필요(규칙)' 레이어. 소방용수 사용불가 표시 + 좌표가 범위 안인 좌표 이상.
+- gaps.geojson       : 주민 지도 '점검 필요(규칙)' 레이어. 소방용수 사용불가 표시 + 소방용수 거리 기준 초과 의심.
                        properties: rule, reason, address, kinds
                        (좌표가 없는 소방용수 16건은 지도에 못 찍으므로 summary에만 센다)
 - integrated.geojson : 관리자용 '통합 점검 후보' (같은 주소에 서로 다른 안전시설 2종 이상). 공백이 아니라
                        여러 부서가 같은 곳을 따로 점검하는 지점 → 묶어서 점검할 후보 (docs/decisions.md 10/19)
-- gap_items.json     : 관리자 목록에 넣을 공백 항목 (사용불가 45 + 좌표 누락·이상 19). 좌표 없는 것도 포함.
+- gap_items.json     : 관리자 목록에 넣을 공백 항목 (사용불가 + 좌표 누락·이상 + 거리 기준 초과 의심). 좌표 없는 것도 포함.
                        서버가 시작할 때 source=gap 제보로 한 번만 적재한다 (backend/app/seed.py)
 - summary.json       : 규칙별 건수와 기준 (PPT 수치 전달용)
 """
@@ -84,6 +84,16 @@ def main() -> None:
         if ok:
             gaps.append(point(r.lat, r.lon, {"rule": "소방용수 사용불가 표시", "reason": r.사유, "address": clean(r.주소), "kinds": ["소방용수"]}))
 
+    r5 = G.rule5(d, fw_raw)
+    for r in r5.itertuples():
+        code = "hydrant_distance_140" if r.단계 == "140m 초과" else "hydrant_distance_100"
+        props = {"rule": "소방용수 거리 기준 초과 의심", "reason": f"{r.종류} {r.이름}: {r.사유}",
+                 "address": clean(r.주소), "kinds": [r.종류, "소방용수"]}
+        gaps.append(point(r.lat, r.lon, props))
+        items.append({"key": f"{code}:{r.종류}:{r.이름}", "rule_code": code, "rule": "소방용수 거리 기준 초과 의심",
+                      "name": f"{r.종류} {r.이름}", "address": clean(r.주소), "lat": float(r.lat), "lon": float(r.lon),
+                      "reason": f"{r.사유} · {r.단계}"})
+
     summary = {
         "generated": date.today().isoformat(),
         "source": "data/README.md 의 공공데이터 4종 (2026-10-19 내려받음)",
@@ -95,7 +105,13 @@ def main() -> None:
         "rule2_note": "같은 주소에 서로 다른 안전시설 2종 이상. 공백이 아니라 통합 점검 후보로 씀 (주민센터·아파트·학교에 몰림)",
         "rule4_unusable_hydrants": len(unusable),
         "rule4_note": "갱신 정체의 나머지(상태 기록 없음·갱신 기록 없음)는 파일 구조 때문일 수 있어 제외",
-        "rule3_school_zone_boundary": "경계 데이터 없음 (경찰청 API 승인 대기)",
+        "rule3_school_zone_boundary": "경계 데이터 대신 보호구역 지정 범위(시설 주출입문 반경 300m)를 우선순위 점수에 사용",
+        "rule5_hydrant_distance": {"total": len(r5), "over_140m": int((r5["단계"] == "140m 초과").sum()) if len(r5) else 0,
+                                   "by_kind": r5["종류"].value_counts().to_dict() if len(r5) else {},
+                                   "non_apartment": int((~r5["아파트"]).sum()) if len(r5) else 0,
+                                   "non_apartment_over_140m": int(((~r5["아파트"]) & (r5["단계"] == "140m 초과")).sum()) if len(r5) else 0,
+                                   "targets": {"어린이보호구역": len(d["어린이보호구역"]), "무더위쉼터": len(d["무더위쉼터"])},
+                                   "basis": "소방기본법 시행규칙 별표3 (주거·상업·공업지역 100m, 그 외 140m)"},
         "mapped_gap_points": len(gaps),
         "mapped_integrated_points": len(integrated),
         "admin_gap_items": len(items),

@@ -36,7 +36,7 @@
 | is_demo | 참/거짓 | 체험용 사진으로 만든 제보 |
 | confirm_count | 정수 | 같은 곳 확인 인원 (우선순위 +5/명, 최대 +20) |
 | gap_key | 문자, 고유 | 공백 항목 중복 적재 방지 (예: `hydrant_unusable:4655`) |
-| gap_rule_code, gap_rule | 문자 | 공백 규칙 코드·화면 이름 (`hydrant_unusable` 소방용수 사용불가 표시, `hydrant_coord` 좌표 누락·이상) |
+| gap_rule_code, gap_rule | 문자 | 공백 규칙 코드·화면 이름 (`hydrant_unusable` 사용불가 표시, `hydrant_coord` 좌표 누락·이상, `hydrant_distance_140`·`hydrant_distance_100` 거리 기준 초과 의심) |
 | gap_reason | 문자 200 | 규칙이 잡은 이유 |
 
 우선순위 점수·기한은 DB에 저장하지 않고 응답할 때 계산한다 (`backend/app/scoring.py`). 값을 바꾸면 바로 반영됨.
