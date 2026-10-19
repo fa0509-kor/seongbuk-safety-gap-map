@@ -1,0 +1,24 @@
+{
+  "generated": "2026-10-19",
+  "source": "data/README.md 의 공공데이터 4종 (2026-10-19 내려받음)",
+  "facilities": {
+    "소방용수": 4936,
+    "무더위쉼터": 262,
+    "어린이보호구역": 94,
+    "AED": 515
+  },
+  "facilities_note": "소방용수는 시설번호 중복(기준일 2개)을 최신 기준일만 남긴 수",
+  "rule1_coord_missing_or_outside": {
+    "total": 19,
+    "no_coords": 16,
+    "outside": 3
+  },
+  "rule2_integrated_candidates": 234,
+  "rule2_note": "같은 주소에 서로 다른 안전시설 2종 이상. 공백이 아니라 통합 점검 후보로 씀 (주민센터·아파트·학교에 몰림)",
+  "rule4_unusable_hydrants": 45,
+  "rule4_note": "갱신 정체의 나머지(상태 기록 없음·갱신 기록 없음)는 파일 구조 때문일 수 있어 제외",
+  "rule3_school_zone_boundary": "경계 데이터 없음 (경찰청 API 승인 대기)",
+  "mapped_gap_points": 45,
+  "mapped_integrated_points": 234,
+  "admin_gap_items": 64
+}

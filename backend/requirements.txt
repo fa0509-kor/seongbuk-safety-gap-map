@@ -1,0 +1,14 @@
+# 백엔드 실행에 필요한 패키지. 설치: pip install -r backend/requirements.txt
+fastapi>=0.115
+uvicorn[standard]>=0.30
+sqlalchemy>=2.0
+python-multipart>=0.0.9
+pillow>=10.0
+httpx>=0.27
+# 실제 AI 분류를 쓸 때만 필요 (키가 없으면 Mock으로 동작하므로 없어도 실행됨)
+openai>=1.40
+anthropic>=0.40
+# Supabase Postgres에 붙을 때 필요 (DATABASE_URL이 postgresql:// 일 때)
+psycopg[binary]>=3.1
+# 테스트
+pytest>=8.0

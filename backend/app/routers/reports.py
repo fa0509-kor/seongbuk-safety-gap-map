@@ -1,0 +1,83 @@
+"""주민 화면용 제보 API. 로그인이 없으므로 '내 제보'는 브라우저에 저장한 public_id 목록으로 찾는다."""
+from __future__ import annotations
+
+from datetime import datetime, timedelta
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select
+from sqlalchemy.orm import Session, selectinload
+
+from .. import serialize
+from ..constants import KST, STATUSES
+from ..db import get_db
+from ..models import Photo, Report, StatusHistory
+from ..schemas import PublicStats, ReportCreate, ReportOut
+
+router = APIRouter(tags=["reports"])
+
+
+def create_report(body: ReportCreate, db: Session, source: str) -> Report:
+    photo = db.get(Photo, body.photo_key)
+    if not photo:
+        raise HTTPException(400, "photo_key에 해당하는 사진이 없음. 먼저 POST /api/photos")
+    ai = photo.ai or {}
+    r = Report(source=source, lat=body.lat, lon=body.lon, address=body.address, memo=body.memo,
+               is_demo=body.is_demo, photo_key=photo.key,
+               ai_category=ai.get("category"), ai_confidence=ai.get("confidence"))
+    r.history.append(StatusHistory(from_status=None, to_status="received", note="제보 접수"))
+    db.add(r)
+    db.commit()
+    db.refresh(r)
+    return r
+
+
+def _q():
+    return select(Report).options(selectinload(Report.history), selectinload(Report.photo))
+
+
+@router.post("/api/reports", response_model=ReportOut)
+def post_report(body: ReportCreate, db: Session = Depends(get_db)):
+    """제보 보내기. 응답의 public_id를 브라우저(localStorage)에 저장해 두면 '내 제보'에서 다시 찾는다."""
+    return serialize.report(create_report(body, db, "resident"))
+
+
+@router.get("/api/reports", response_model=list[ReportOut])
+def my_reports(ids: str = Query(..., description="public_id를 쉼표로 이어 붙인 값"), db: Session = Depends(get_db)):
+    wanted = [i for i in ids.split(",") if i][:50]
+    rows = db.scalars(_q().where(Report.public_id.in_(wanted)).order_by(Report.created_at.desc())).all()
+    return [serialize.report(r) for r in rows]
+
+
+@router.get("/api/reports/map")
+def reports_map(include_demo: bool = False, db: Session = Depends(get_db)) -> dict:
+    """주민 지도의 '주민 제보 / 조치 완료' 점. 메모·사진은 넣지 않는다 (하단 시트에서 개별 조회)."""
+    q = select(Report).where(Report.lat.is_not(None), Report.lon.is_not(None), Report.false_positive.is_(False))
+    if not include_demo:
+        q = q.where(Report.is_demo.is_(False))
+    feats = [{"type": "Feature", "geometry": {"type": "Point", "coordinates": [r.lon, r.lat]},
+              "properties": {"public_id": r.public_id, "source": r.source, "status": r.status,
+                             "status_label": STATUSES.get(r.status, r.status), "category": r.ai_category,
+                             "created_at": serialize.utc(r.created_at).isoformat()}}
+             for r in db.scalars(q)]
+    return {"type": "FeatureCollection", "features": feats}
+
+
+@router.get("/api/stats", response_model=PublicStats)
+def public_stats(db: Session = Depends(get_db)):
+    """주민 첫 화면의 '이번 주 제보·조치 완료' 건수. 주는 월요일 0시(한국 시간)부터."""
+    now = datetime.now(KST)
+    start = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    rows = db.scalars(_q().where(Report.source == "resident", Report.is_demo.is_(False),
+                                 Report.false_positive.is_(False))).all()
+    week = lambda dt: serialize.utc(dt) >= start  # noqa: E731
+    return {"week_reports": sum(1 for r in rows if week(r.created_at)),
+            "week_done": sum(1 for r in rows if r.status == "done"
+                             and any(h.to_status == "done" and week(h.created_at) for h in r.history))}
+
+
+@router.get("/api/reports/{public_id}", response_model=ReportOut)
+def get_report(public_id: str, db: Session = Depends(get_db)):
+    r = db.scalars(_q().where(Report.public_id == public_id)).first()
+    if not r:
+        raise HTTPException(404, "제보 없음")
+    return serialize.report(r)
