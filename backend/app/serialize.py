@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from . import scoring, storage
+from . import departments, scoring, storage
 from .constants import SOURCES, STATUSES
 from .models import Report
 
@@ -30,12 +30,14 @@ def report(r: Report, admin: bool = False) -> dict:
         "status_label": STATUSES.get(r.status, r.status), "news_at": utc(r.news_at),
         "lat": r.lat, "lon": r.lon, "address": r.address, "memo": r.memo,
         "photo_url": _url(r.photo_key), "after_photo_url": _url(after),
-        "ai": r.photo.ai if r.photo else None, "dept_note": r.dept_note, "history": history,
+        "ai": r.photo.ai if r.photo else None, "facility_type": r.facility_type,
+        "facility_label": departments.facility_label(r.facility_type), "dept": r.dept,
+        "dept_note": r.dept_note, "confirm_count": r.confirm_count or 0, "history": history,
     }
     if admin:
         out |= {"id": r.id, "updated_at": utc(r.updated_at), "source": r.source,
-                "source_label": SOURCES.get(r.source, r.source), "dept": r.dept,
+                "source_label": SOURCES.get(r.source, r.source),
                 "dispatch": r.dispatch, "false_positive": r.false_positive, "is_demo": r.is_demo,
-                "confirm_count": r.confirm_count or 0, "gap_rule": r.gap_rule, "gap_reason": r.gap_reason,
+                "gap_rule": r.gap_rule, "gap_reason": r.gap_reason,
                 "priority": scoring.score(r)}
     return out

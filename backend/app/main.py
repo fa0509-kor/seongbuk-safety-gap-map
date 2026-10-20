@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse
 from . import config
 from .db import init_db
 from .seed import seed_gap_items
-from .routers import admin, mapdata, photos, reports, system
+from .routers import admin, mapdata, photos, report, reports, system
 
 logging.basicConfig(level=logging.INFO)
 
@@ -22,7 +22,7 @@ app = FastAPI(title="성북 안전 공백 지도 API", version="0.1.0")
 init_db()
 seed_gap_items()
 
-for r in (system.router, mapdata.router, photos.router, reports.router, admin.router):
+for r in (system.router, mapdata.router, photos.router, reports.router, admin.router, report.router):
     app.include_router(r)
 
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { api } from '../lib/api.js'
+import { myReports } from '../lib/myReports.js'
 
 // 주민 3 지도. 필터: 전체 / 점검 필요 / 주민 제보 / 조치 완료. ('점검 필요'는 와이어프레임의 '점검 공백'·'점검 기록 없음'을 데이터에 맞게 바꾼 이름, docs/decisions.md) 하단 시트에 선택 항목 요약.
 // 배경 타일은 CARTO (키 불필요, 출처 표기 필요). OSM 공용 타일은 쓰지 않음 (CLAUDE.md).
@@ -18,6 +19,19 @@ export default function MapPage() {
   const [reports, setReports] = useState([])
   const [filter, setFilter] = useState('all')
   const [selected, setSelected] = useState(null)
+  const [confirmMsg, setConfirmMsg] = useState('')
+
+  // 나도 봤어요(+1): 같은 곳 확인 인원 → 우선순위 점수에 반영. 브라우저당 한 번
+  async function confirmSeen(publicId) {
+    try {
+      const r = await api.confirm(publicId)
+      myReports.markConfirmed(publicId)
+      setReports((list) => list.map((f) => (f.properties.public_id === publicId
+        ? { ...f, properties: { ...f.properties, confirm_count: r.confirm_count } } : f)))
+      setSelected((f) => ({ ...f, properties: { ...f.properties, confirm_count: r.confirm_count } }))
+      setConfirmMsg('확인 고마워요. 담당자 화면의 우선순위에 반영됩니다.')
+    } catch (e) { setConfirmMsg(`실패: ${e.message}`) }
+  }
 
   useEffect(() => {
     map.current = L.map(el.current, { zoomControl: false }).setView(CENTER, 14)
@@ -45,7 +59,7 @@ export default function MapPage() {
     shown.forEach((f) => {
       const [lon, lat] = f.geometry.coordinates
       L.circleMarker([lat, lon], { radius: 6, color: f._color, fillColor: f._color, fillOpacity: 0.8, weight: 1 })
-        .on('click', () => setSelected(f))
+        .on('click', () => { setSelected(f); setConfirmMsg('') })
         .addTo(layer.current)
     })
   }, [shown])
@@ -70,7 +84,19 @@ export default function MapPage() {
           <button type="button" onClick={() => setSelected(null)} className="float-right text-gray-400">닫기</button>
           {selected._kind === 'gap'
             ? <><div className="text-xs text-gray-500">규칙</div><div className="font-semibold">{p.rule}</div><div className="text-sm">{p.reason}</div><div className="text-xs text-gray-500">{p.address}</div></>
-            : <><div className="text-xs text-gray-500">주민 제보 · {p.status_label}</div><div className="font-semibold">{p.category ?? '분류 없음'}</div><div className="text-xs text-gray-500">{new Date(p.created_at).toLocaleString('ko-KR')}</div></>}
+            : <>
+                <div className="text-xs text-gray-500">주민 제보 · {p.status_label}{p.facility_label && ` · ${p.facility_label}`}</div>
+                <div className="font-semibold">{p.category ?? '분류 없음'}</div>
+                <div className="text-xs text-gray-500">{new Date(p.created_at).toLocaleString('ko-KR')} · 같은 곳 확인 {p.confirm_count ?? 0}명</div>
+                {p.status !== 'done' && (
+                  <button type="button" disabled={myReports.confirmed(p.public_id) || myReports.ids().includes(p.public_id)}
+                    onClick={() => confirmSeen(p.public_id)}
+                    className="mt-2 w-full rounded-lg border py-2 text-sm disabled:opacity-40">
+                    {myReports.confirmed(p.public_id) ? '확인했어요' : '나도 봤어요 (+1)'}
+                  </button>
+                )}
+                {confirmMsg && <p className="mt-1 text-xs text-gray-600">{confirmMsg}</p>}
+              </>}
         </div>
       )}
     </div>

@@ -51,7 +51,8 @@ class Report(Base):
     ai_category: Mapped[str | None] = mapped_column(String(20))
     ai_confidence: Mapped[int | None] = mapped_column(Integer)
 
-    dept: Mapped[str | None] = mapped_column(String(50))                  # 담당 부서 (규칙 배정, 미구현)
+    facility_type: Mapped[str | None] = mapped_column(String(20))         # 시설 종류 코드 (departments.FACILITY_TYPES)
+    dept: Mapped[str | None] = mapped_column(String(50))                  # 담당 부서. 접수 때 규칙으로 1차 배정, 담당자가 수정 가능
     dept_note: Mapped[str | None] = mapped_column(Text)                   # 주민에게 보이는 담당 부서 메모
     dispatch: Mapped[bool] = mapped_column(Boolean, default=False)        # 현장 출동 여부
     false_positive: Mapped[bool] = mapped_column(Boolean, default=False)  # AI 오탐 표시

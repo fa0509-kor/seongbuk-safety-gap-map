@@ -87,6 +87,10 @@ def update(report_id: int, body: ReportUpdate, db: Session = Depends(get_db)):
     if body.after_photo_key and not db.get(Photo, body.after_photo_key):
         raise HTTPException(400, "after_photo_key에 해당하는 사진이 없음")
 
+    dept_changed = body.dept is not None and body.dept != r.dept
+    if dept_changed:  # 재배정은 처리 이력에 남긴다
+        r.history.append(StatusHistory(from_status=r.status, to_status=r.status,
+                                       note=f"담당 부서 변경: {r.dept or '-'} → {body.dept}"))
     for field in ("dept", "dept_note", "dispatch", "false_positive"):
         v = getattr(body, field)
         if v is not None:
@@ -99,7 +103,7 @@ def update(report_id: int, body: ReportUpdate, db: Session = Depends(get_db)):
     if changed:
         r.status = body.status
     # 주민에게 보이는 변화(상태, 메모, 조치 후 사진, 담당 부서 메모)가 있으면 빨간 점 시각을 갱신
-    if changed or body.note or body.after_photo_key or body.dept_note is not None:
+    if changed or body.note or body.after_photo_key or body.dept_note is not None or dept_changed:
         r.news_at = now()
     db.commit()
     db.refresh(r)
