@@ -16,7 +16,7 @@
 | 메서드 | 주소 | 설명 |
 | --- | --- | --- |
 | GET | `/api/health` | `{ok, db: sqlite/postgres, storage: local/supabase, vision_provider: mock/openai/anthropic}` |
-| GET | `/api/meta` | 위 고정값 |
+| GET | `/api/meta` | 위 고정값 + `facility_types`(시설 종류 코드→이름), `departments`(재배정용 부서 목록) |
 
 ## 지도
 | 메서드 | 주소 | 응답 |
@@ -24,7 +24,7 @@
 | GET | `/api/facilities` | GeoJSON. `properties: {kind: 소방용수/무더위쉼터/AED/어린이보호구역, name, address}` |
 | GET | `/api/gaps` | 주민 지도 '점검 필요(규칙)': 소방용수 사용불가 + 거리 기준 초과 의심. GeoJSON `properties: {rule, reason, address, kinds[]}`. **AI가 아니라 규칙 결과** → 화면에 "규칙"으로 표시 |
 | GET | `/api/admin/integrated` | 관리자용 통합 점검 후보(같은 주소에 안전시설 2종 이상). 형식은 위와 같음. 공백이 아님 |
-| GET | `/api/reports/map?include_demo=false` | GeoJSON. `properties: {public_id, source, status, status_label, category, created_at}`. 오탐 표시된 건 제외 |
+| GET | `/api/reports/map?include_demo=false` | **주민 제보만**. GeoJSON `properties: {public_id, source, status, status_label, category, facility_label, confirm_count, created_at}`. 오탐 제외 |
 
 `/api/facilities`, `/api/gaps`, `/api/admin/integrated` 는 `data/processed/*.geojson` 을 그대로 내보낸다 (`python backend/scripts/build_geojson.py` 로 생성).
 
@@ -62,7 +62,8 @@
 ## 주민 제보
 | 메서드 | 주소 | 설명 |
 | --- | --- | --- |
-| POST | `/api/reports` | 제보 보내기. 본문 `{photo_key, lat?, lon?, address?, memo?(200자), is_demo?}` |
+| POST | `/api/reports` | 제보 보내기. 본문 `{photo_key, lat?, lon?, address?, memo?(200자), is_demo?, facility_type?}`. 시설 종류로 담당 부서 1차 배정 (`docs/departments.md`) |
+| POST | `/api/reports/{public_id}/confirm` | 나도 봤어요(+1). `confirm_count` +1 → 우선순위 1명당 +5(최대 +20). 중복 방지는 브라우저에서만 |
 | GET | `/api/reports?ids=a,b,c` | 내 제보 목록 (최대 50개). `ids`는 브라우저에 저장한 `public_id` |
 | GET | `/api/reports/{public_id}` | 제보 1건 |
 
@@ -75,6 +76,7 @@
   "lat": 37.589, "lon": 127.016, "address": null, "memo": "옹벽에 금",
   "photo_url": "/api/photos/....jpg", "after_photo_url": "/api/photos/....jpg",
   "ai": { ... 위와 같음 ... },
+  "facility_type": "stairs", "facility_label": "계단", "dept": "도로과 도로시설팀", "confirm_count": 0,
   "dept_note": "도로과 보수 완료",
   "history": [{"at": "...", "from_status": null, "to_status": "received", "to_status_label": "접수", "note": "제보 접수", "photo_url": null}]
 }
@@ -88,9 +90,10 @@
 | GET | `/api/admin/reports` | 목록. 쿼리: `source`, `status`, `category`, `include_demo`(기본 true), `sort=priority`(기본)/`new`/`old` |
 | POST | `/api/admin/reports` | CCTV 프레임 등 직접 등록. `{photo_key, source: "cctv"/"gap", lat?, lon?, ...}` |
 | GET | `/api/admin/reports/{id}` | 상세 |
-| PATCH | `/api/admin/reports/{id}` | 보낸 항목만 변경: `status, note, after_photo_key, dept, dept_note, dispatch, false_positive` |
+| PATCH | `/api/admin/reports/{id}` | 보낸 항목만 변경: `status, note, after_photo_key, dept, dept_note, dispatch, false_positive`. 부서를 바꾸면 이력에 '담당 부서 변경' |
+| GET | `/api/admin/report?start=YYYY-MM-DD&end=YYYY-MM-DD` | 기간별 보고서 (한국 날짜, 기본 이번 달). `summary_lines`(고정 양식 문장), `counts`, `by_dept`, `top_open`. 체험 제보 제외 |
 
-- 관리자 응답(`AdminReportOut`) = 주민 응답 + `id, updated_at, source, source_label, dept, dispatch, false_positive, is_demo, confirm_count, gap_rule, gap_reason, priority`.
+- 관리자 응답(`AdminReportOut`) = 주민 응답 + `id, updated_at, source, source_label, dispatch, false_positive, is_demo, gap_rule, gap_reason, priority`.
 - `priority` = 규칙 점수 (`backend/app/scoring.py`, 값은 docs/decisions.md):
 ```json
 {"total": 50, "urgent": false, "due_at": "2026-10-26T14:20:56Z", "overdue": false,
@@ -102,5 +105,4 @@
 - PATCH에서 상태가 바뀌거나 `note`/`after_photo_key`가 있으면 처리 이력(`history`)에 한 줄 추가.
 
 ## 아직 없는 API (docs/handoff.md 참고)
-- 기간별 보고서
-- 같은 곳 확인(나도 봤어요 +1): `confirm_count` 열과 점수 계산은 준비됨, 올리는 API 없음
+- 학습 모델 분류 (`vision.py`에 provider `model` 추가 예정)

@@ -2,7 +2,7 @@
 
 - 정의: `backend/app/models.py`. 서버가 켜질 때 표가 없으면 만든다 (마이그레이션 도구 없음).
 - 로컬은 `backend/var/app.db`(SQLite), 배포는 `DATABASE_URL`(Supabase Postgres). 같은 코드로 동작.
-- 열을 추가·변경하면: 로컬은 `backend/var/app.db`를 지우고 다시 켠다. (10/19 공백 항목·확인 인원 열 추가 → 그 전에 만든 로컬 DB는 지우고 다시 켤 것) 배포 DB는 Supabase SQL 편집기에서 `ALTER TABLE` (팀에 공유).
+- 열을 추가·변경하면: 로컬은 `backend/var/app.db`를 지우고 다시 켠다. (10/19 공백 항목·확인 인원 열, 10/20 시설 종류 열 추가 → 그 전에 만든 로컬 DB는 지우고 다시 켤 것) 배포 DB는 Supabase SQL 편집기에서 `ALTER TABLE` (팀에 공유).
 
 ## photos — 올라온 사진 1장
 | 열 | 형식 | 설명 |
@@ -29,7 +29,8 @@
 | memo | 문자 200 | 주민 한 줄 메모 |
 | photo_key | → photos.key | 제보 사진 |
 | ai_category, ai_confidence | | 필터·정렬용으로 photos.ai에서 복사 |
-| dept | 문자 | 담당 부서 (규칙 배정 미구현) |
+| facility_type | 문자 | 시설 종류 코드 (`backend/app/departments.py` FACILITY_TYPES). 주민이 제보할 때 고름, 기본 unknown |
+| dept | 문자 | 담당 부서. 접수 때 규칙으로 1차 배정(시설 종류 / 공백 항목은 성북소방서), 담당자가 수정 |
 | dept_note | 글 | 주민에게 보이는 담당 부서 메모 |
 | dispatch | 참/거짓 | 현장 출동 |
 | false_positive | 참/거짓 | AI 오탐 표시. 지도에서 숨김 |
