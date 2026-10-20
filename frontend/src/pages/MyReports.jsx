@@ -33,7 +33,8 @@ export default function MyReports() {
             {r.photo_url && <figure><img src={r.photo_url} alt="제보 사진" className="rounded" /><figcaption className="text-xs text-gray-500">제보 사진</figcaption></figure>}
             {r.after_photo_url && <figure><img src={r.after_photo_url} alt="조치 후 사진" className="rounded" /><figcaption className="text-xs text-gray-500">조치 후</figcaption></figure>}
           </div>
-          {r.dept_note && <p className="rounded bg-gray-50 p-2 text-sm">담당 부서: {r.dept_note}</p>}
+          {r.dept && <p className="text-xs text-gray-500">담당: {r.dept}{r.facility_label && ` · ${r.facility_label}`}</p>}
+          {r.dept_note && <p className="rounded bg-gray-50 p-2 text-sm">담당 부서 메모: {r.dept_note}</p>}
         </article>
       ))}
     </section>

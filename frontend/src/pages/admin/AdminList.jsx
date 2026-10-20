@@ -49,7 +49,7 @@ export default function AdminList() {
       </div>
       {msg && <p className="text-sm text-gray-600">{msg}</p>}
       <table className="w-full rounded-lg bg-white text-sm">
-        <thead className="text-left text-gray-500"><tr><th className="p-2">번호</th><th>점수</th><th>접수</th><th>출처</th><th>유형·규칙</th><th>AI 확신도</th><th>상태</th><th>기한</th><th>오탐</th></tr></thead>
+        <thead className="text-left text-gray-500"><tr><th className="p-2">번호</th><th>점수</th><th>접수</th><th>출처</th><th>유형·규칙</th><th>AI 확신도</th><th>담당</th><th>상태</th><th>기한</th><th>오탐</th></tr></thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.id} className="border-t hover:bg-gray-50">
@@ -59,6 +59,7 @@ export default function AdminList() {
               <td>{r.source_label}{r.is_demo && ' (체험)'}</td>
               <td>{r.gap_rule ? <span>{r.gap_rule} <span className="text-xs text-gray-500">규칙</span></span> : (r.ai?.category ?? '-')}</td>
               <td>{r.ai?.confidence ?? '-'}</td>
+              <td className="text-xs">{r.dept ?? '-'}</td>
               <td>{r.status_label}</td>
               <td className={r.priority.overdue ? 'font-semibold text-danger' : 'text-gray-500'}>
                 {r.priority.due_at ? (r.priority.overdue ? '초과' : new Date(r.priority.due_at).toLocaleDateString('ko-KR')) : '-'}

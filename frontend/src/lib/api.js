@@ -37,6 +37,7 @@ export const api = {
   createReport: (body) => request('/api/reports', json('POST', body)),
   myReports: (ids) => (ids.length ? request(`/api/reports?ids=${ids.join(',')}`) : Promise.resolve([])),
   report: (publicId) => request(`/api/reports/${publicId}`),
+  confirm: (publicId) => request(`/api/reports/${publicId}/confirm`, { method: 'POST' }), // 나도 봤어요 +1
   stats: () => request('/api/stats'), // 첫 화면 '이번 주 제보·조치 완료'
 
   // 관리자
@@ -46,4 +47,5 @@ export const api = {
   adminCreate: (body) => request('/api/admin/reports', json('POST', body)),
   adminSummary: () => request('/api/admin/summary'),
   adminIntegrated: () => request('/api/admin/integrated'), // 통합 점검 후보 (공백 아님)
+  adminPeriodReport: (params = {}) => request(`/api/admin/report?${new URLSearchParams(params)}`), // 기간별 보고서
 }

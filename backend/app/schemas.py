@@ -38,6 +38,7 @@ class ReportCreate(BaseModel):
     address: str | None = Field(None, max_length=200)
     memo: str | None = Field(None, max_length=200)
     is_demo: bool = False
+    facility_type: str | None = Field(None, description="시설 종류 코드 (GET /api/meta 의 facility_types). 없으면 unknown")
 
 
 class AdminReportCreate(ReportCreate):
@@ -67,7 +68,11 @@ class ReportOut(BaseModel):
     photo_url: str | None
     after_photo_url: str | None = Field(None, description="가장 최근 조치 후 사진")
     ai: AIResult | None
+    facility_type: str | None = None
+    facility_label: str | None = None
+    dept: str | None = Field(None, description="담당 부서 (규칙 1차 배정 → 담당자 수정 가능)")
     dept_note: str | None
+    confirm_count: int = Field(0, description="같은 곳 확인(나도 봤어요) 인원")
     history: list[HistoryOut]
 
 
@@ -92,11 +97,9 @@ class AdminReportOut(ReportOut):
     updated_at: datetime
     source: str
     source_label: str
-    dept: str | None
     dispatch: bool
     false_positive: bool
     is_demo: bool
-    confirm_count: int
     gap_rule: str | None = Field(None, description="공백 탐지 항목의 규칙 이름")
     gap_reason: str | None = None
     priority: Priority

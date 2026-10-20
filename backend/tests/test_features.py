@@ -1,0 +1,76 @@
+"""부서 자동 배정, 나도 봤어요(+1), 기간별 보고서."""
+from fastapi.testclient import TestClient
+
+from backend.app import departments, scoring
+from backend.app.main import app
+
+from .test_api import upload
+
+client = TestClient(app)
+
+
+def report(**body):
+    p = upload()
+    r = client.post("/api/reports", json={"photo_key": p["key"], "lat": 37.0, "lon": 127.5, **body})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def admin(public_id):
+    return next(x for x in client.get("/api/admin/reports").json() if x["public_id"] == public_id)
+
+
+def test_meta_has_facility_types():
+    ft = client.get("/api/meta").json()["facility_types"]
+    assert ft["retaining_wall"] == "옹벽·축대" and "unknown" in ft
+
+
+def test_department_assigned_by_facility_type():
+    r = report(facility_type="stairs")
+    assert r["dept"] == "도로과 도로시설팀" and r["facility_label"] == "계단"
+    assert "1차 배정" in r["history"][0]["note"]
+    assert report()["dept"] == departments.DEFAULT_DEPT  # 모름 → 안전점검 총괄
+    assert report(facility_type="retaining_wall")["dept"] == departments.DEFAULT_DEPT
+    p = upload()
+    bad = client.post("/api/reports", json={"photo_key": p["key"], "facility_type": "우주선"})
+    assert bad.status_code == 400
+
+
+def test_gap_items_go_to_fire_station():
+    gaps = client.get("/api/admin/reports", params={"source": "gap"}).json()
+    assert gaps and all(g["dept"] == "성북소방서" for g in gaps)
+
+
+def test_reassign_is_recorded():
+    item = admin(report(facility_type="sidewalk")["public_id"])
+    d = client.patch(f"/api/admin/reports/{item['id']}", json={"dept": "도로과 도로시설팀"}).json()
+    assert d["dept"] == "도로과 도로시설팀"
+    assert any("담당 부서 변경" in (h["note"] or "") for h in d["history"])
+
+
+def test_resident_map_has_only_resident_reports():
+    feats = client.get("/api/reports/map").json()["features"]
+    assert feats and all(f["properties"]["source"] == "resident" for f in feats)
+
+
+def test_confirm_adds_points():
+    r = report()
+    before = admin(r["public_id"])["priority"]["total"]
+    for _ in range(5):
+        client.post(f"/api/reports/{r['public_id']}/confirm")
+    after = admin(r["public_id"])
+    assert after["confirm_count"] == 5
+    assert after["priority"]["total"] == before + scoring.CONFIRM_POINTS_MAX  # 5명이어도 최대 +20
+    gap_id = client.get("/api/admin/reports", params={"source": "gap"}).json()[0]["public_id"]
+    assert client.post(f"/api/reports/{gap_id}/confirm").status_code == 404
+
+
+def test_period_report():
+    item = admin(report(facility_type="park")["public_id"])
+    client.patch(f"/api/admin/reports/{item['id']}", json={"status": "done"})
+    rep = client.get("/api/admin/report").json()
+    assert rep["counts"]["received"] >= 1 and rep["counts"]["done"] >= 1
+    assert rep["counts"]["by_facility"].get("공원·놀이시설", 0) >= 1
+    assert any(d["dept"] == "공원녹지과 공원관리팀" and d["done"] >= 1 for d in rep["by_dept"])
+    assert len(rep["summary_lines"]) == 5 and "{" not in "".join(rep["summary_lines"])
+    assert client.get("/api/admin/report", params={"start": "2026-12-01", "end": "2026-11-01"}).status_code == 400

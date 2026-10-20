@@ -13,8 +13,10 @@ export default function AdminDetail() {
   const [r, setR] = useState(null)
   const [note, setNote] = useState('')
   const [msg, setMsg] = useState('')
+  const [depts, setDepts] = useState([])
 
   useEffect(() => { api.adminReport(id).then(setR).catch((e) => setMsg(e.message)) }, [id])
+  useEffect(() => { api.meta().then((m) => setDepts(m.departments)).catch(() => {}) }, [])
 
   async function save(patch) {
     try { setR(await api.adminUpdate(id, patch)); setNote(''); setMsg('저장됨') } catch (e) { setMsg(`실패: ${e.message}`) }
@@ -37,6 +39,7 @@ export default function AdminDetail() {
             ? <div className="text-sm"><p className="text-gray-500">AI 판단 없음 — 공공데이터 규칙으로 찾은 항목</p><p className="mt-2 font-semibold">{r.gap_rule}</p><p>{r.gap_reason}</p><p className="text-gray-500">{r.address}</p></div>
             : <AIResultCard ai={r.ai} />}
           {r.memo && <p className="mt-2 text-sm">{r.source === 'gap' ? r.memo : `주민 메모: ${r.memo}`}</p>}
+          {r.confirm_count > 0 && <p className="text-sm text-gray-600">같은 곳 확인 {r.confirm_count}명</p>}
         </div>
         <div className="rounded-lg bg-white p-4">
           <h2 className="mb-2 font-semibold">규칙이 매긴 점수</h2>
@@ -44,6 +47,11 @@ export default function AdminDetail() {
         </div>
         <div className="flex flex-col gap-2 rounded-lg bg-white p-4">
           <h2 className="font-semibold">사람의 결정</h2>
+          <label className="text-xs text-gray-500">담당 부서 (규칙이 1차 배정{r.facility_label && ` · 시설: ${r.facility_label}`})</label>
+          <select value={r.dept ?? ''} onChange={(e) => save({ dept: e.target.value })} className="rounded border p-1 text-sm">
+            {r.dept && !depts.includes(r.dept) && <option value={r.dept}>{r.dept}</option>}
+            {depts.map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
           <select value={r.status} onChange={(e) => save({ status: e.target.value, note: note || null })} className="rounded border p-1">
             {Object.entries(STATUSES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>

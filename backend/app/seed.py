@@ -7,7 +7,7 @@ import logging
 
 from sqlalchemy import select
 
-from . import config
+from . import config, departments
 from .db import SessionLocal
 from .models import Report, StatusHistory
 
@@ -25,8 +25,10 @@ def seed_gap_items() -> int:
         for i in new:
             r = Report(source="gap", gap_key=i["key"], gap_rule_code=i["rule_code"], gap_rule=i["rule"],
                        gap_reason=i["reason"][:200], address=i.get("address"), lat=i.get("lat"), lon=i.get("lon"),
-                       memo=f"시설번호 {i['name']}" if i.get("name") else None)
-            r.history.append(StatusHistory(from_status=None, to_status="received", note="공백 탐지 규칙으로 등록"))
+                       memo=(i.get("name") if i["rule_code"].startswith("hydrant_distance")
+                             else f"시설번호 {i['name']}" if i.get("name") else None),
+                       dept=departments.assign("gap", gap_rule_code=i["rule_code"]))
+            r.history.append(StatusHistory(from_status=None, to_status="received", note=f"공백 탐지 규칙으로 등록 · {r.dept}"))
             db.add(r)
         db.commit()
     if new:
