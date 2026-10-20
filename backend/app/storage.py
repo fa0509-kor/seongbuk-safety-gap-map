@@ -62,9 +62,14 @@ def local_path(key: str):
 # --- Supabase Storage (REST). 계정 연결 후 확인 필요: docs/handoff.md 참고 ---
 
 def _headers() -> dict:
-    if not (config.SUPABASE_URL and config.SUPABASE_SERVICE_KEY):
+    """새 secret key(sb_secret_…)는 JWT가 아니라 apikey 헤더로만 보낸다 (Supabase 'Migrating to new API keys').
+    예전 service_role 키(JWT)는 apikey + Authorization 둘 다 보낸다."""
+    key = config.SUPABASE_SERVICE_KEY
+    if not (config.SUPABASE_URL and key):
         raise RuntimeError("STORAGE=supabase 인데 SUPABASE_URL / SUPABASE_SERVICE_KEY 가 없음")
-    return {"Authorization": f"Bearer {config.SUPABASE_SERVICE_KEY}", "apikey": config.SUPABASE_SERVICE_KEY}
+    if key.startswith("sb_"):
+        return {"apikey": key}
+    return {"Authorization": f"Bearer {key}", "apikey": key}
 
 
 def _supabase_put(key: str, data: bytes) -> None:

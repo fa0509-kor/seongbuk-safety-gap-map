@@ -1,11 +1,12 @@
 """공백 탐지 항목을 관리자 목록(source=gap)에 한 번만 적재한다. 서버 시작 시 main.py가 부른다.
-원본: data/processed/gap_items.json (backend/scripts/build_geojson.py 가 만듦). 이미 있는 gap_key는 건너뛴다."""
+원본: backend/data/gap_items.json (backend/scripts/build_geojson.py 가 만듦). 이미 있는 gap_key는 건너뛴다."""
 from __future__ import annotations
 
 import json
 import logging
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from . import config, departments
 from .db import SessionLocal
@@ -30,7 +31,12 @@ def seed_gap_items() -> int:
                        dept=departments.assign("gap", gap_rule_code=i["rule_code"]))
             r.history.append(StatusHistory(from_status=None, to_status="received", note=f"공백 탐지 규칙으로 등록 · {r.dept}"))
             db.add(r)
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:  # 배포에서 서버 여러 개가 동시에 적재하면 한쪽은 중복으로 실패 → 이미 들어간 것
+            db.rollback()
+            log.info("공백 항목은 다른 인스턴스가 이미 적재함")
+            return 0
     if new:
         log.info("공백 항목 %d건 적재", len(new))
     return len(new)

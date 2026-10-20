@@ -1,4 +1,4 @@
-"""공공데이터 원본 → 지도용 GeoJSON (data/processed/). 서버는 이 파일을 읽기만 한다.
+"""공공데이터 원본 → 지도용 GeoJSON (backend/data/). 서버는 이 파일을 읽기만 한다.
 
 실행 (저장소 루트에서): python backend/scripts/build_geojson.py
 필요: poc/requirements.txt (pandas, pyproj). 배포 서버에는 pandas가 필요 없도록 결과 파일을 git에 올린다.
@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "poc"))
 import gap_rules as G  # noqa: E402
 
-OUT = ROOT / "data" / "processed"
+OUT = ROOT / "backend" / "data"  # 서버가 읽는 위치 (배포 때 backend/ 만 올라감)
 S, N, W, E = G.BOX
 
 

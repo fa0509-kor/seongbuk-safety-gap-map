@@ -15,11 +15,11 @@
 | 주민 제보 저장, 내 제보 조회, 빨간 점 | ✅ | `routers/reports.py`, `frontend/src/lib/myReports.js` | 아래 시연 흐름 |
 | 관리자 목록·상세·상태 변경·메모·조치 후 사진·오탐·출동 | ✅ | `routers/admin.py` | 아래 시연 흐름 |
 | CCTV 프레임 업로드 (주민 사진과 같은 분류) | ✅ | `AdminList.jsx` | 관리자 목록 오른쪽 위 버튼 |
-| 주민 지도 '점검 필요(규칙)' 레이어 (사용불가 45 + 거리 기준 초과 의심 33) | ✅ | `backend/scripts/build_geojson.py`, `data/processed/gaps.geojson` | `/map` |
+| 주민 지도 '점검 필요(규칙)' 레이어 (사용불가 45 + 거리 기준 초과 의심 33) | ✅ | `backend/scripts/build_geojson.py`, `backend/data/gaps.geojson` | `/map` |
 | 통합 점검 후보 234곳 지도·목록·필터 | ✅ | `pages/admin/AdminIntegrated.jsx`, `GET /api/admin/integrated` | `/admin/integrated` |
 | 화면 7개 + 하단바 | 🟡 | `frontend/src/pages/` | 데이터 흐름은 동작. **모양은 와이어프레임 기준으로 다시 그려야 함** |
 | 우선순위 점수 v1, 목록 우선순위 정렬(기본), 상세 '규칙이 매긴 점수' 항목별 표시, 조치 기한·기한 초과 | ✅ | `backend/app/scoring.py`, `components/PriorityCard.jsx` | 관리자 상세 가운데 칸 |
-| 공백 항목 97건 관리자 목록 적재 (사용불가 45 + 좌표 누락·이상 19 + 거리 기준 33) | ✅ | `backend/app/seed.py`, `data/processed/gap_items.json` | 목록 출처 '공백 탐지' |
+| 공백 항목 97건 관리자 목록 적재 (사용불가 45 + 좌표 누락·이상 19 + 거리 기준 33) | ✅ | `backend/app/seed.py`, `backend/data/gap_items.json` | 목록 출처 '공백 탐지' |
 | 대시보드 집계(오늘 신규·기한 초과·이번 달 완료·평균 처리 기간), 첫 화면 이번 주 건수 | ✅ | `GET /api/admin/summary`, `GET /api/stats` | `/admin`, `/` |
 | 부서 자동 배정 (제보 때 시설 종류 선택 → 부서), 관리자 재배정·이력 | ✅ | `backend/app/departments.py`, 부서 표 `docs/departments.md` | 제보 3단계 시설 종류 → 관리자 상세 '담당 부서' |
 | 기간별 보고서 (고정 양식 + DB 집계, 인쇄·PDF) | ✅ | `routers/report.py`, `pages/admin/AdminReport.jsx` | `/admin/report` |
@@ -50,12 +50,12 @@
 - [ ] 노션 기획안 v1에 위 결정 반영 (PM)
 - [ ] (선택) 소방재난본부 문의 — 10/20 있는 데이터로 '기록 불일치' 근거를 찾아 필수 아님 (decisions.md 10/20)
 
-## 4. 배포 체크리스트 (마지막 단계, 미검증)
+## 4. 배포 체크리스트 (자세한 순서는 `docs/deploy.md`)
 - [x] 레포 공개 전환 (10/19 완료). 공개 전 확인: `.env`·키·AED 담당자 정보·AI-Hub 파일이 커밋 기록에 없음
-- [ ] Supabase 프로젝트 (서울 지역) → `DATABASE_URL`, 비공개 버킷 `reports`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`
+- [x] Supabase 프로젝트·버킷 생성 (10/20, PM)
 - [ ] Vercel 프로젝트 → 위 환경변수 + `STORAGE=supabase` + `OPENAI_API_KEY`, 함수 지역 서울(icn1)
-- [ ] Vercel 설정 파일: 프론트 빌드(`frontend/dist`) + FastAPI 진입점. Vercel 문서 "How to ship a FastAPI app on Vercel" 따라 작성
-- [ ] Supabase Storage 업로드·서명 주소 확인 (`storage.py`의 supabase 부분은 아직 실제로 안 돌려봄)
+- [x] Vercel 설정 파일 `vercel.json` (Services: web=frontend, api=backend), 가공 데이터 `backend/data/`로 이동 (10/20)
+- [ ] Supabase Storage 업로드·서명 주소 실제 확인 (`docs/deploy.md` 2·4번)
 - [ ] 폰 데이터로 QR 접속, 위치 권한, 사진 올리기
 - [ ] Supabase 무료는 1주 미사용 시 일시정지 → 발표 전날 접속 확인
 

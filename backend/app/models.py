@@ -59,7 +59,7 @@ class Report(Base):
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False)         # 체험용 사진으로 만든 제보
     confirm_count: Mapped[int] = mapped_column(Integer, default=0)        # 같은 곳 확인(나도 봤어요) 인원, 우선순위 3 기능
 
-    # 공백 탐지 항목(source=gap)만 쓰는 열. data/processed/gap_items.json 에서 적재 (seed.py)
+    # 공백 탐지 항목(source=gap)만 쓰는 열. backend/data/gap_items.json 에서 적재 (seed.py)
     gap_key: Mapped[str | None] = mapped_column(String(80), unique=True)  # 중복 적재 방지용 (예: hydrant_unusable:4655)
     gap_rule_code: Mapped[str | None] = mapped_column(String(40))         # hydrant_unusable / hydrant_coord
     gap_rule: Mapped[str | None] = mapped_column(String(50))              # 화면 이름

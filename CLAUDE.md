@@ -112,7 +112,7 @@ seongbuk-safety-gap-map/
   docs/         규격: api.md, db.md, handoff.md (이어받을 일)
   poc/          사전 검증 스크립트와 결과물
   data/raw/     원본 공공데이터 (AI-Hub 제외)
-  data/processed/  지도용 GeoJSON (backend/scripts/build_geojson.py 결과)
+  backend/data/ 지도용 GeoJSON·공백 항목 (backend/scripts/build_geojson.py 결과, 서버가 읽음)
   backend/app/  FastAPI 앱 (routers/, vision.py, storage.py, models.py)
   backend/tests/
   frontend/src/ React 화면 (pages/, components/, lib/api.js)
