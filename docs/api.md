@@ -22,7 +22,7 @@
 | 메서드 | 주소 | 응답 |
 | --- | --- | --- |
 | GET | `/api/facilities` | GeoJSON. `properties: {kind: 소방용수/무더위쉼터/AED/어린이보호구역, name, address}` |
-| GET | `/api/gaps` | 주민 지도 '점검 필요(규칙)'. GeoJSON `properties: {rule, reason, address, kinds[]}`. **AI가 아니라 규칙 결과** → 화면에 "규칙"으로 표시 |
+| GET | `/api/gaps` | 주민 지도 '점검 필요(규칙)': 소방용수 사용불가 + 거리 기준 초과 의심. GeoJSON `properties: {rule, reason, address, kinds[]}`. **AI가 아니라 규칙 결과** → 화면에 "규칙"으로 표시 |
 | GET | `/api/admin/integrated` | 관리자용 통합 점검 후보(같은 주소에 안전시설 2종 이상). 형식은 위와 같음. 공백이 아님 |
 | GET | `/api/reports/map?include_demo=false` | GeoJSON. `properties: {public_id, source, status, status_label, category, created_at}`. 오탐 표시된 건 제외 |
 
@@ -98,7 +98,7 @@
            {"label": "관리목록 밖", "points": 0, "note": "데이터 대기 (해빙기 점검 326개소 목록)"},
            {"label": "어린이보호구역 인접", "points": 30, "note": "성북어린이집 137m (반경 300m)"}]}
 ```
-- 공백 탐지 항목(`source=gap`, 64건)은 서버가 켜질 때 `data/processed/gap_items.json`에서 한 번 적재된다. 사진·AI 결과가 없고 `gap_rule`, `gap_reason`이 있다. 기한(`due_at`) 없음
+- 공백 탐지 항목(`source=gap`, 97건: 사용불가 45 + 좌표 이상 19 + 거리 기준 33)은 서버가 켜질 때 `data/processed/gap_items.json`에서 한 번 적재된다. 사진·AI 결과가 없고 `gap_rule`, `gap_reason`이 있다. 기한(`due_at`) 없음
 - PATCH에서 상태가 바뀌거나 `note`/`after_photo_key`가 있으면 처리 이력(`history`)에 한 줄 추가.
 
 ## 아직 없는 API (docs/handoff.md 참고)

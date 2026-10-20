@@ -1,9 +1,10 @@
 """우선순위 점수 v1, 공백 항목 적재, 집계 API."""
+import json
 from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
 
-from backend.app import scoring
+from backend.app import config, scoring
 from backend.app.db import SessionLocal
 from backend.app.main import app
 from backend.app.models import Report
@@ -26,8 +27,11 @@ def admin_item(public_id):
 
 def test_gap_items_seeded_once():
     gaps = client.get("/api/admin/reports", params={"source": "gap"}).json()
-    assert len(gaps) == 64
-    assert {g["gap_rule"] for g in gaps} == {"소방용수 사용불가 표시", "소방용수 좌표 누락·이상"}
+    items = json.loads((config.PROCESSED_DIR / "gap_items.json").read_text(encoding="utf-8"))
+    assert len(gaps) == len(items)
+    assert {g["gap_rule"] for g in gaps} == {"소방용수 사용불가 표시", "소방용수 좌표 누락·이상", "소방용수 거리 기준 초과 의심"}
+    far = [g for g in gaps if g["gap_rule"] == "소방용수 거리 기준 초과 의심"]
+    assert all(g["priority"]["total"] in (15, 25) for g in far)
     assert seed_gap_items() == 0  # 다시 불러도 중복 없음
     unusable = next(g for g in gaps if g["gap_rule"] == "소방용수 사용불가 표시")
     assert unusable["priority"]["total"] == scoring.GAP_POINTS["hydrant_unusable"]  # 보호구역 가산 없음
@@ -74,7 +78,7 @@ def test_overdue_and_summary():
     client.patch(f"/api/admin/reports/{done['id']}", json={"status": "done"})
     s = client.get("/api/admin/summary").json()
     assert s["overdue_open"] >= 1 and s["done_this_month"] >= 1 and s["avg_days_to_done"] is not None
-    assert s["today_new"] >= 1 and s["open_by_status"]["received"] >= 64
+    assert s["today_new"] >= 1 and s["open_by_status"]["received"] >= 64  # 공백 항목 포함
 
     st = client.get("/api/stats").json()
     assert st["week_reports"] >= 1 and st["week_done"] >= 1

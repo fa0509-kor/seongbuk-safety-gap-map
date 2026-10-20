@@ -44,7 +44,7 @@ python backend/scripts/build_geojson.py
 ## Git 작업 방식
 - `main` = 배포되는 버전, 항상 돌아가는 상태. 직접 커밋하지 않고 브랜치 → PR → squash merge
 - 브랜치 하나에 기능 하나, 1~2일 안에 합치기: `feat/…`, `fix/…`, `data/…`, `docs/…`
-- 폴더 담당: `frontend/` 규민, `backend/`·`data/`·`poc/` 준호·재영. 공용 파일(`CLAUDE.md`, `docs/api.md`, `requirements.txt`, `package.json`)을 바꾸면 단톡에 한 줄
+- 같은 파일을 동시에 고치지 않게, 작업을 시작할 때 브랜치 이름과 고칠 폴더를 단톡에 한 줄 남긴다. 공용 파일(`CLAUDE.md`, `docs/api.md`, `requirements.txt`, `package.json`)을 바꾸면 단톡에 한 줄
 - PR 올릴 때 `docs/handoff.md` 해당 줄 갱신 (PR 템플릿에 체크 항목 있음)
 - 11/6 저녁 `v1.0-final` 태그 후에는 치명적 오류 수정만 합침
 

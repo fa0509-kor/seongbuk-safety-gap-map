@@ -15,7 +15,12 @@ from . import config
 
 # --- 점수 상수 (한곳에 모음) ---
 TYPE_POINTS = {"철근 노출": 40, "박리": 30, "콘크리트 균열": 20, "백태/누수": 15, "기타": 5}
-GAP_POINTS = {"hydrant_unusable": 25, "hydrant_coord": 10}
+GAP_POINTS = {
+    "hydrant_unusable": 25,        # 소방용수 사용불가 표시
+    "hydrant_distance_140": 25,    # 어린이 시설·쉼터에서 사용 가능 소방용수 140m 초과 (어느 지역이든 기준 초과)
+    "hydrant_distance_100": 15,    # 100~140m (주거·상업·공업지역이면 기준 초과)
+    "hydrant_coord": 10,           # 소방용수 좌표 누락·이상
+}
 SCHOOL_ZONE_RADIUS_M = 300      # 보호구역 지정 기준(시설 주출입문 반경 300m). 경계 데이터 오기 전 대용
 SCHOOL_ZONE_POINTS = 30
 OUTSIDE_LIST_POINTS = 20        # 관리목록(해빙기 점검 326개소) 밖. 목록을 받기 전까지 계산하지 않음
