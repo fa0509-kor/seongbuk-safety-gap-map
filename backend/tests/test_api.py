@@ -23,7 +23,8 @@ def upload(**params):
 
 def test_health_and_meta():
     h = client.get("/api/health").json()
-    assert h["ok"] and h["vision_provider"] == "mock" and h["db"] == "sqlite"
+    assert h["ok"] and h["db_ok"] and h["vision_provider"] == "mock" and h["db"] == "sqlite"
+    assert "gap_items.json" in h["data_files"]  # 배포에서도 backend/data 가 같이 올라갔는지 확인용
     m = client.get("/api/meta").json()
     assert m["statuses"]["received"] == "접수" and "철근 노출" in m["categories"]
 

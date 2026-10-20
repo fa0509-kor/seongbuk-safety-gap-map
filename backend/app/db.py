@@ -36,6 +36,29 @@ def get_db() -> Iterator[Session]:
         db.close()
 
 
+STARTUP_ERROR: str | None = None  # 시작 준비(표 생성·공백 적재) 실패 사유. /api/health 에서 보여줌
+
+
+def short_error(e: Exception) -> str:
+    """에러 첫 줄만 (DB 주소·비밀번호는 psycopg 메시지에 들어가지 않음)."""
+    return f"{type(e).__name__}: {str(e).strip().splitlines()[0][:200] if str(e).strip() else ''}"
+
+
+def prepare() -> bool:
+    """표 생성 + 공백 항목 적재. 실패해도 서버는 켜두고(헬스 체크로 원인 확인), 다음 호출 때 다시 시도한다."""
+    global STARTUP_ERROR
+    from .seed import seed_gap_items
+    try:
+        init_db()
+        seed_gap_items()
+        STARTUP_ERROR = None
+        return True
+    except Exception as e:  # noqa: BLE001
+        STARTUP_ERROR = short_error(e)
+        logging.getLogger(__name__).exception("시작 준비 실패")
+        return False
+
+
 def init_db() -> None:
     """표가 없으면 만든다. 배포에서는 서버가 동시에 여러 개 켜질 수 있어, 다른 쪽이 먼저 만들었으면 넘어간다."""
     from sqlalchemy.exc import IntegrityError, ProgrammingError
