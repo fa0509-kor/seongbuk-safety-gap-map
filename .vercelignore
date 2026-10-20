@@ -1,0 +1,8 @@
+# 배포에 필요 없는 큰 파일·로컬 파일 (원본 공공데이터, AI-Hub, 로컬 DB·사진, 빌드 결과)
+data/raw/
+poc/
+backend/var/
+backend/tests/
+frontend/node_modules/
+frontend/dist/
+.env

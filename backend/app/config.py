@@ -15,8 +15,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]          # 저장소 루트
 BACKEND_DIR = ROOT / "backend"
-VAR_DIR = Path(os.getenv("VAR_DIR", BACKEND_DIR / "var"))  # 로컬 DB·사진 (git 제외)
-PROCESSED_DIR = ROOT / "data" / "processed"          # 지도용 GeoJSON (scripts가 만듦)
+# 로컬 DB·사진 (git 제외). Vercel은 /tmp 밖에 쓸 수 없으므로 거기서는 /tmp 사용 (DATABASE_URL이 없을 때의 임시 대비)
+VAR_DIR = Path(os.getenv("VAR_DIR") or ("/tmp/sbgap" if os.getenv("VERCEL") else BACKEND_DIR / "var"))
+PROCESSED_DIR = BACKEND_DIR / "data"                 # 지도용 GeoJSON·공백 항목 (backend/scripts/build_geojson.py가 만듦)
+# 배포(Vercel)는 backend/ 폴더만 서버로 올리므로 서버가 읽는 파일은 모두 backend/ 안에 둔다
 FRONTEND_DIST = ROOT / "frontend" / "dist"           # npm run build 결과
 
 

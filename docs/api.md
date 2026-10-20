@@ -26,7 +26,7 @@
 | GET | `/api/admin/integrated` | 관리자용 통합 점검 후보(같은 주소에 안전시설 2종 이상). 형식은 위와 같음. 공백이 아님 |
 | GET | `/api/reports/map?include_demo=false` | **주민 제보만**. GeoJSON `properties: {public_id, source, status, status_label, category, facility_label, confirm_count, created_at}`. 오탐 제외 |
 
-`/api/facilities`, `/api/gaps`, `/api/admin/integrated` 는 `data/processed/*.geojson` 을 그대로 내보낸다 (`python backend/scripts/build_geojson.py` 로 생성).
+`/api/facilities`, `/api/gaps`, `/api/admin/integrated` 는 `backend/data/*.geojson` 을 그대로 내보낸다 (`python backend/scripts/build_geojson.py` 로 생성).
 
 ## 집계
 | 메서드 | 주소 | 설명 |
@@ -101,7 +101,7 @@
            {"label": "관리목록 밖", "points": 0, "note": "데이터 대기 (해빙기 점검 326개소 목록)"},
            {"label": "어린이보호구역 인접", "points": 30, "note": "성북어린이집 137m (반경 300m)"}]}
 ```
-- 공백 탐지 항목(`source=gap`, 97건: 사용불가 45 + 좌표 이상 19 + 거리 기준 33)은 서버가 켜질 때 `data/processed/gap_items.json`에서 한 번 적재된다. 사진·AI 결과가 없고 `gap_rule`, `gap_reason`이 있다. 기한(`due_at`) 없음
+- 공백 탐지 항목(`source=gap`, 97건: 사용불가 45 + 좌표 이상 19 + 거리 기준 33)은 서버가 켜질 때 `backend/data/gap_items.json`에서 한 번 적재된다. 사진·AI 결과가 없고 `gap_rule`, `gap_reason`이 있다. 기한(`due_at`) 없음
 - PATCH에서 상태가 바뀌거나 `note`/`after_photo_key`가 있으면 처리 이력(`history`)에 한 줄 추가.
 
 ## 아직 없는 API (docs/handoff.md 참고)

@@ -1,4 +1,4 @@
-"""지도용 공공데이터. scripts/build_geojson.py 가 만든 data/processed/*.geojson 을 그대로 내보낸다."""
+"""지도용 공공데이터. scripts/build_geojson.py 가 만든 backend/data/*.geojson 을 그대로 내보낸다."""
 from __future__ import annotations
 
 import json

@@ -74,3 +74,12 @@ def test_period_report():
     assert any(d["dept"] == "공원녹지과 공원관리팀" and d["done"] >= 1 for d in rep["by_dept"])
     assert len(rep["summary_lines"]) == 5 and "{" not in "".join(rep["summary_lines"])
     assert client.get("/api/admin/report", params={"start": "2026-12-01", "end": "2026-11-01"}).status_code == 400
+
+
+def test_supabase_headers_for_new_and_legacy_keys(monkeypatch):
+    from backend.app import config, storage
+    monkeypatch.setattr(config, "SUPABASE_URL", "https://x.supabase.co")
+    monkeypatch.setattr(config, "SUPABASE_SERVICE_KEY", "sb_secret_abc")
+    assert storage._headers() == {"apikey": "sb_secret_abc"}  # 새 키는 JWT가 아니라 apikey만
+    monkeypatch.setattr(config, "SUPABASE_SERVICE_KEY", "eyJhbGciOi.legacy.jwt")
+    assert storage._headers()["Authorization"].startswith("Bearer ")
