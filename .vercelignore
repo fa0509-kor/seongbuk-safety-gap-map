@@ -5,4 +5,6 @@ backend/var/
 backend/tests/
 frontend/node_modules/
 frontend/dist/
-.env
+# 키가 들어 있는 파일 (.env, Vercel CLI가 만든 .env.local 등)
+.env*
+.vercel
