@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { addBaseLayer } from '../lib/map.js'
 
 // 제보 위치 핀 조정: 핀을 끌거나 지도를 눌러 위치를 바꾼다. value가 없으면 성북구청 근처에서 시작.
 const SEONGBUK = [37.5894, 127.0167]
@@ -19,9 +20,7 @@ export default function PinPicker({ value, onChange }) {
   useEffect(() => {
     const start = value ? [value.lat, value.lon] : SEONGBUK
     map.current = L.map(el.current, { zoomControl: false, attributionControl: true }).setView(start, 17)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19, attribution: '&copy; OpenStreetMap &copy; CARTO',
-    }).addTo(map.current)
+    addBaseLayer(map.current)
     marker.current = L.marker(start, { draggable: true, icon: pinIcon }).addTo(map.current)
     const emit = (ll) => onChange({ lat: ll.lat, lon: ll.lng })
     marker.current.on('dragend', () => emit(marker.current.getLatLng()))

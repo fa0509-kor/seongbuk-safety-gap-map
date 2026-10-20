@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { api } from '../../lib/api.js'
+import { addBaseLayer } from '../../lib/map.js'
 
 // 통합 점검 후보: 같은 주소에 서로 다른 안전시설이 2종 이상 있는 곳.
 // '공백'이 아니라 여러 부서(소방·보건·복지·교통)가 따로 점검하는 곳을 묶어 점검할 후보 (docs/decisions.md 10/19)
@@ -17,7 +18,7 @@ export default function AdminIntegrated() {
 
   useEffect(() => {
     map.current = L.map(el.current).setView([37.5894, 127.0167], 13)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap &copy; CARTO' }).addTo(map.current)
+    addBaseLayer(map.current)
     layer.current = L.layerGroup().addTo(map.current)
     api.adminIntegrated().then((g) => setRows(g.features)).catch(() => {})
     return () => map.current.remove()
