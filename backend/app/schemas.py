@@ -105,12 +105,22 @@ class AdminReportOut(ReportOut):
     priority: Priority
 
 
+class Screening(BaseModel):
+    facilities_total: int = Field(description="공공데이터 안전시설 전체 개수 (summary.json)")
+    facilities: dict[str, int]
+    targets: int = Field(description="규칙으로 먼저 확인할 곳 = 공백 탐지 항목 수")
+    targets_done: int = Field(description="그중 조치 완료로 바뀐 곳")
+    ratio_pct: float | None = Field(None, description="targets / facilities_total (%)")
+    by_rule: dict[str, int]
+
+
 class AdminSummary(BaseModel):
     today_new: int = Field(description="오늘(한국 시간) 들어온 주민·CCTV 제보 (공백 후보 제외)")
     overdue_open: int = Field(description="기한이 지났는데 완료가 아닌 건")
     done_this_month: int
     avg_days_to_done: float | None = Field(None, description="완료된 건의 접수→완료 평균 일수. 완료 건이 없으면 null")
     open_by_status: dict[str, int]
+    screening: Screening = Field(description="데이터 사전 점검 지표 (docs/benchmark.md)")
 
 
 class PublicStats(BaseModel):

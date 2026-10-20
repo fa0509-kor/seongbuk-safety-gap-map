@@ -32,7 +32,7 @@
 | 메서드 | 주소 | 설명 |
 | --- | --- | --- |
 | GET | `/api/stats` | 주민 첫 화면 `{week_reports, week_done}`. 이번 주(월요일 0시, 한국 시간)·주민 제보만·체험/오탐 제외 |
-| GET | `/api/admin/summary` | 대시보드 `{today_new, overdue_open, done_this_month, avg_days_to_done, open_by_status}`. 공백 후보는 '오늘 신규'·기한에서 제외 |
+| GET | `/api/admin/summary` | 대시보드 `{today_new, overdue_open, done_this_month, avg_days_to_done, open_by_status, screening}`. 공백 후보는 '오늘 신규'·기한에서 제외. `screening` = 데이터 사전 점검 `{facilities_total, facilities, targets, targets_done, ratio_pct, by_rule}` (`docs/benchmark.md`) |
 
 ## 사진
 | 메서드 | 주소 | 설명 |

@@ -109,7 +109,7 @@
 ```
 seongbuk-safety-gap-map/
   CLAUDE.md, README.md, 개발_일정.md
-  docs/         규격: api.md, db.md, handoff.md (이어받을 일)
+  docs/         규격: api.md, db.md, handoff.md (이어받을 일), benchmark.md (벤치마크 → 기능 연결)
   poc/          사전 검증 스크립트와 결과물
   data/raw/     원본 공공데이터 (AI-Hub 제외)
   backend/data/ 지도용 GeoJSON·공백 항목 (backend/scripts/build_geojson.py 결과, 서버가 읽음)
