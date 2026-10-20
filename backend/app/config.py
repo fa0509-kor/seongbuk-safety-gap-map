@@ -13,8 +13,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]          # 저장소 루트
-BACKEND_DIR = ROOT / "backend"
+# backend 폴더 기준으로 잡는다. 배포(Vercel)에서는 backend/ 만 올라가 저장소 루트가 없기 때문
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+ROOT = BACKEND_DIR.parent                            # 저장소 루트 (로컬에서만 의미 있음)
 # 로컬 DB·사진 (git 제외). Vercel은 /tmp 밖에 쓸 수 없으므로 거기서는 /tmp 사용 (DATABASE_URL이 없을 때의 임시 대비)
 VAR_DIR = Path(os.getenv("VAR_DIR") or ("/tmp/sbgap" if os.getenv("VERCEL") else BACKEND_DIR / "var"))
 PROCESSED_DIR = BACKEND_DIR / "data"                 # 지도용 GeoJSON·공백 항목 (backend/scripts/build_geojson.py가 만듦)
