@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { api } from '../lib/api.js'
+import { addBaseLayer } from '../lib/map.js'
 import { myReports } from '../lib/myReports.js'
 
 // 주민 3 지도. 필터: 전체 / 점검 필요 / 주민 제보 / 조치 완료. ('점검 필요'는 와이어프레임의 '점검 공백'·'점검 기록 없음'을 데이터에 맞게 바꾼 이름, docs/decisions.md) 하단 시트에 선택 항목 요약.
-// 배경 타일은 CARTO (키 불필요, 출처 표기 필요). OSM 공용 타일은 쓰지 않음 (CLAUDE.md).
+// 배경 타일 설정은 lib/map.js (OSM 표준 타일, 출처 표기 필수)
 const CENTER = [37.5894, 127.0167]
 const COLORS = { gap: '#6b7280', received: '#f59e0b', review: '#3b82f6', action: '#8b5cf6', done: '#16a34a' }
 const FILTERS = [['all', '전체'], ['gap', '점검 필요'], ['resident', '주민 제보'], ['done', '조치 완료']]
@@ -35,10 +36,7 @@ export default function MapPage() {
 
   useEffect(() => {
     map.current = L.map(el.current, { zoomControl: false }).setView(CENTER, 14)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-    }).addTo(map.current)
+    addBaseLayer(map.current)
     layer.current = L.layerGroup().addTo(map.current)
     api.gaps().then((g) => setGaps(g.features)).catch(() => {})
     api.reportsMap().then((r) => setReports(r.features)).catch(() => {})

@@ -101,7 +101,7 @@
 | DB | 로컬 SQLite(`backend/var/app.db`) / 배포 Supabase Postgres. `DATABASE_URL`로 전환 |
 | 사진 저장 | 로컬 `backend/var/uploads/` / 배포 Supabase Storage 비공개 버킷. `STORAGE`로 전환. 저장 전 긴 변 1600px, EXIF 제거 |
 | 배포 | Vercel 무료 + Supabase 무료 (비용 0원 원칙). 계정·레포 공개 여부 보류 중, `docs/handoff.md` 4번 |
-| 지도 | Leaflet.js. 배경 타일은 CARTO(키 불필요, 출처 표기 필요). OSM 공용 타일은 파일로 열거나 배포 서비스에서 접근이 차단되므로 쓰지 않음. 카카오맵·VWorld는 키 발급되면 교체 |
+| 지도 | Leaflet.js. 배경 타일은 OSM 표준 타일(키 불필요, 지도 위 출처 표기 필수, 대량 다운로드 금지). 설정은 `frontend/src/lib/map.js` 한곳. CARTO는 2026-10 API 키 필요로 바뀌어 교체. 브이월드·카카오맵은 키 발급되면 교체 |
 | 좌표 | 저장·표시는 WGS84. 공공데이터가 투영 좌표계면 pyproj로 변환 |
 | 인코딩 | 공공데이터 CSV는 `utf-8-sig` → `cp949` → `euc-kr` 순으로 시도 |
 
