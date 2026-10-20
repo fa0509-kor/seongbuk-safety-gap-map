@@ -10,6 +10,18 @@ from ..departments import DEPARTMENTS, FACILITY_TYPES
 router = APIRouter(tags=["system"])
 
 
+def _db_url_shape() -> dict | None:
+    """DB 주소 모양만 점검 (비밀번호는 내보내지 않음). '@'는 1개여야 하고 포트는 6543(Transaction pooler)."""
+    url = config.DATABASE_URL
+    if url.startswith("sqlite"):
+        return None
+    tail = url.rsplit("@", 1)[-1]
+    host_port = tail.split("/", 1)[0]
+    return {"at_count": url.count("@"), "host": host_port.rsplit(":", 1)[0],
+            "port": host_port.rsplit(":", 1)[-1] if ":" in host_port else None,
+            "ok_shape": url.count("@") == 1 and host_port.endswith(":6543")}
+
+
 @router.get("/api/health")
 def health() -> dict:
     """서버가 켜져 있는지, 지금 어떤 DB·저장소·AI로 도는지 (키 값은 내보내지 않음).
@@ -27,6 +39,7 @@ def health() -> dict:
             "db_ok": db_ok, "db_error": db_error,
             "storage": config.STORAGE,
             "vision_provider": config.vision_provider(),
+            "db_url_check": _db_url_shape(),
             "data_files": sorted(p.name for p in config.PROCESSED_DIR.glob("*")) if config.PROCESSED_DIR.exists() else []}
 
 

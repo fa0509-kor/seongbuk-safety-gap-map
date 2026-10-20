@@ -57,6 +57,10 @@ main에 머지된 뒤: `git switch main && git pull && npx vercel@latest --prod`
 11/6 동결 후에는 치명적 오류 수정만 배포.
 
 ## 문제가 생기면
+- **먼저 `(주소)/api/health`를 본다.** `db_ok`, `db_error`(원인 첫 줄), `db_url_check`(DB 주소 모양: `at_count`는 1, `port`는 6543), `data_files`(서버에 올라간 데이터 파일)를 보여준다. 키·비밀번호는 나오지 않음
+- `failed to resolve host '@aws-…'` → DB 주소에 `@`가 2개. 비밀번호에 `@`가 있거나 예전 주소를 넣은 것. 비밀번호는 영문·숫자로만 재설정
+- Vercel에 DB 주소를 넣을 때는 손으로 복사하지 말고 `.env`에서 바로 복사: `grep '^DATABASE_URL=' .env | cut -d= -f2- | tr -d '\n' | pbcopy` → `npx vercel@latest env add DATABASE_URL production`에서 붙여넣기
+- 환경변수를 바꾸면 다시 배포해야 반영됨
 - 빌드 실패: Vercel 프로젝트 → Deployments → 실패한 배포 → Build Logs (키가 찍혀 있지 않은지 확인 후 공유)
 - `/api/health`가 500: Functions 로그. DB 주소의 비밀번호·포트(6543) 확인
 - 사진 업로드 실패: 버킷 이름 `reports`, Secret key가 publishable이 아닌지
@@ -67,4 +71,6 @@ main에 머지된 뒤: `git switch main && git pull && npx vercel@latest --prod`
 - `backend/app/storage.py`: `sb_secret_` 키는 `apikey` 헤더만 (새 키는 JWT가 아님)
 - `backend/app/config.py`: Vercel에서 DB 주소가 없으면 `/tmp` 사용
 - 서버가 동시에 여러 개 켜져도 표 생성·공백 항목 적재가 겹치지 않게 처리 (`db.init_db`, `seed.py`)
-- 2026-10-20: 로컬 Postgres 16에서 백엔드 테스트 전체 통과 확인. Vercel·Supabase 실제 배포는 미확인
+- 2026-10-20: 로컬 Postgres 16에서 백엔드 테스트 전체 통과. Vercel 미리보기 배포에서 Supabase 연결(`db_ok: true`) 확인
+- 서버가 시작할 때 DB 준비에 실패해도 꺼지지 않고, `/api/health`가 원인을 보여주며 다시 시도함 (`db.prepare`)
+- 서버 경로는 `backend/` 폴더 기준 (배포에는 backend/만 올라감)

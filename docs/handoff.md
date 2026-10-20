@@ -53,7 +53,7 @@
 ## 4. 배포 체크리스트 (자세한 순서는 `docs/deploy.md`)
 - [x] 레포 공개 전환 (10/19 완료). 공개 전 확인: `.env`·키·AED 담당자 정보·AI-Hub 파일이 커밋 기록에 없음
 - [x] Supabase 프로젝트·버킷 생성 (10/20, PM)
-- [ ] Vercel 프로젝트 → 위 환경변수 + `STORAGE=supabase` + `OPENAI_API_KEY`, 함수 지역 서울(icn1)
+- [x] Vercel 프로젝트·환경변수 6개·함수 지역 서울(icn1), 미리보기 배포에서 DB 연결 확인 (10/20, PM). CLI로 배포 (`docs/deploy.md`)
 - [x] Vercel 설정 파일 `vercel.json` (Services: web=frontend, api=backend), 가공 데이터 `backend/data/`로 이동 (10/20)
 - [ ] Supabase Storage 업로드·서명 주소 실제 확인 (`docs/deploy.md` 2·4번)
 - [ ] 폰 데이터로 QR 접속, 위치 권한, 사진 올리기
