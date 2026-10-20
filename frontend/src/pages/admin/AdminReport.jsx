@@ -41,8 +41,8 @@ export default function AdminReport() {
       {rep && (
         <>
           <header className="border-b pb-2">
-            <h1 className="text-2xl font-bold">성북구 안전 점검 보고서</h1>
-            <p className="text-sm text-gray-600">기간 {rep.period.start} ~ {rep.period.end} · 작성 {rep.generated_at.replace('T', ' ').slice(0, 16)}</p>
+            <h1 className="text-2xl font-bold">성북구 안전 점검 확인서</h1>
+            <p className="text-sm text-gray-600">기간 보고 · {rep.period.start} ~ {rep.period.end} · 작성 {rep.generated_at.replace('T', ' ').slice(0, 16)}</p>
           </header>
           <div className="flex flex-col gap-1">
             {rep.summary_lines.map((line) => <p key={line}>{line}</p>)}

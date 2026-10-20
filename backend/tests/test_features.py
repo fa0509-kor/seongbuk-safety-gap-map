@@ -72,7 +72,7 @@ def test_period_report():
     assert rep["counts"]["received"] >= 1 and rep["counts"]["done"] >= 1
     assert rep["counts"]["by_facility"].get("공원·놀이시설", 0) >= 1
     assert any(d["dept"] == "공원녹지과 공원관리팀" and d["done"] >= 1 for d in rep["by_dept"])
-    assert len(rep["summary_lines"]) == 5 and "{" not in "".join(rep["summary_lines"])
+    assert len(rep["summary_lines"]) == 6 and "{" not in "".join(rep["summary_lines"])
     assert client.get("/api/admin/report", params={"start": "2026-12-01", "end": "2026-11-01"}).status_code == 400
 
 
@@ -91,3 +91,15 @@ def test_dotenv_value_cleaning():
     assert _clean_value("sb_secret_x   # service_role 키") == "sb_secret_x"
     assert _clean_value("pa#ss") == "pa#ss"            # 공백 없이 붙은 #은 값
     assert _clean_value('"has # inside"') == "has # inside"
+
+
+def test_screening_in_summary_and_report():
+    s = client.get("/api/admin/summary").json()["screening"]
+    assert s["facilities_total"] > 5000 and s["targets"] == 97
+    assert 0 < s["ratio_pct"] < 5 and sum(s["by_rule"].values()) == 97
+    gap = client.get("/api/admin/reports", params={"source": "gap"}).json()[0]
+    client.patch(f"/api/admin/reports/{gap['id']}", json={"status": "done"})
+    assert client.get("/api/admin/summary").json()["screening"]["targets_done"] >= 1
+    rep = client.get("/api/admin/report").json()
+    assert rep["screening"]["targets"] == 97
+    assert any("먼저 확인할 곳은 97곳" in line for line in rep["summary_lines"])

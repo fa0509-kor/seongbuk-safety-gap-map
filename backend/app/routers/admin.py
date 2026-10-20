@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from .. import scoring, serialize
+from .. import scoring, screening, serialize
 from ..constants import KST, STATUSES
 from ..db import get_db
 from ..models import Photo, Report, StatusHistory, now
@@ -57,7 +57,8 @@ def summary(db: Session = Depends(get_db)):
     open_by_status = {k: sum(1 for r in rows if r.status == k) for k in STATUSES if k != "done"}
     return {"today_new": today_new, "overdue_open": overdue, "done_this_month": done_month,
             "avg_days_to_done": round(sum(durations) / len(durations), 1) if durations else None,
-            "open_by_status": open_by_status}
+            "open_by_status": open_by_status,
+            "screening": screening.screening([r for r in rows if not r.is_demo])}
 
 
 @router.post("/reports", response_model=AdminReportOut)

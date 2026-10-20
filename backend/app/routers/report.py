@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from .. import departments, scoring, serialize
+from .. import departments, scoring, screening, serialize
 from ..constants import KST, SOURCES, STATUSES
 from ..db import get_db
 from ..models import Report
@@ -23,6 +23,7 @@ TEMPLATE = [
     "기한이 지났는데 완료되지 않은 항목은 현재 {overdue}건입니다.",
     "AI가 판별한 결함 유형은 {categories} 순으로 많았습니다. AI 판별은 담당자가 확인한 결과가 아닙니다.",
     "AI 오탐으로 표시된 항목은 {false_positive}건입니다.",
+    "공공데이터 안전시설 {facilities_total}곳 중 규칙으로 먼저 확인할 곳은 {targets}곳이며, 현재 {targets_done}곳 확인을 마쳤습니다. 나머지 시설이 안전하다는 뜻은 아닙니다.",
 ]
 
 
@@ -76,6 +77,7 @@ def period_report(start: str | None = None, end: str | None = None, db: Session 
     top_open = sorted(open_rows, key=lambda r: scoring.score(r)["total"], reverse=True)[:5]
 
     avg = round(sum(durations) / len(durations), 1) if durations else None
+    scr = screening.screening([r for r in rows if not r.is_demo])
     values = {
         "start": s.isoformat(), "end": e.isoformat(), "received": len(in_period),
         "resident": by_source.get("resident", 0), "cctv": by_source.get("cctv", 0), "gap": by_source.get("gap", 0),
@@ -83,6 +85,7 @@ def period_report(start: str | None = None, end: str | None = None, db: Session 
         "overdue": len(overdue),
         "categories": ", ".join(f"{k} {v}건" for k, v in by_category.most_common(3)) or "(판별 결과 없음)",
         "false_positive": sum(1 for r in in_period if r.false_positive),
+        "facilities_total": f"{scr['facilities_total']:,}", "targets": scr["targets"], "targets_done": scr["targets_done"],
     }
     return {
         "period": {"start": values["start"], "end": values["end"]},
@@ -95,6 +98,7 @@ def period_report(start: str | None = None, end: str | None = None, db: Session 
             "done": len(done_rows), "avg_days_to_done": avg, "overdue_open": len(overdue),
             "status_now": {STATUSES[k]: sum(1 for r in rows if r.status == k and not r.is_demo) for k in STATUSES},
         },
+        "screening": scr,
         "by_dept": [{"dept": d, "received": by_dept_received.get(d, 0), "done": by_dept_done.get(d, 0)}
                     for d in sorted(set(by_dept_received) | set(by_dept_done))],
         "top_open": [{"id": r.id, "label": r.gap_rule or r.ai_category or "-", "dept": r.dept,
