@@ -22,6 +22,18 @@ PROCESSED_DIR = BACKEND_DIR / "data"                 # 지도용 GeoJSON·공백
 FRONTEND_DIST = ROOT / "frontend" / "dist"           # npm run build 결과
 
 
+def _clean_value(v: str) -> str:
+    """값 뒤의 ' # 설명'은 주석으로 보고 자른다 (따옴표로 감싼 값은 그대로).
+    공백 없이 붙은 #(예: 비밀번호 안의 #)은 값으로 둔다."""
+    v = v.strip()
+    if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'":
+        return v[1:-1]
+    for i, ch in enumerate(v):
+        if ch == "#" and i > 0 and v[i - 1] in " \t":
+            return v[:i].rstrip()
+    return v
+
+
 def _load_dotenv() -> None:
     env = ROOT / ".env"
     if not env.exists():
@@ -31,7 +43,7 @@ def _load_dotenv() -> None:
         if not line or line.startswith("#") or "=" not in line:
             continue
         k, v = line.split("=", 1)
-        os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+        os.environ.setdefault(k.strip(), _clean_value(v))
 
 
 _load_dotenv()

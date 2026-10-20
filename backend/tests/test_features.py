@@ -83,3 +83,11 @@ def test_supabase_headers_for_new_and_legacy_keys(monkeypatch):
     assert storage._headers() == {"apikey": "sb_secret_abc"}  # 새 키는 JWT가 아니라 apikey만
     monkeypatch.setattr(config, "SUPABASE_SERVICE_KEY", "eyJhbGciOi.legacy.jwt")
     assert storage._headers()["Authorization"].startswith("Bearer ")
+
+
+def test_dotenv_value_cleaning():
+    from backend.app.config import _clean_value
+    assert _clean_value("reports         # 비공개 버킷") == "reports"
+    assert _clean_value("sb_secret_x   # service_role 키") == "sb_secret_x"
+    assert _clean_value("pa#ss") == "pa#ss"            # 공백 없이 붙은 #은 값
+    assert _clean_value('"has # inside"') == "has # inside"
