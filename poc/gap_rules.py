@@ -16,7 +16,11 @@ import json
 import re
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
+import shapely
+from pyproj import Transformer
+from shapely import wkt
 
 from common import filter_seongbuk, read_table
 
@@ -84,6 +88,41 @@ def rule2(all_: pd.DataFrame) -> pd.DataFrame:
     r["규칙"] = "같은 주소 안전시설 중복"
     r["사유"] = r["주소키"] + " 에 " + r.groupby("주소키")["종류"].transform(lambda x: "·".join(sorted(set(x)))) + " 겹침"
     return r
+
+
+ZONE_FILE = RAW / "보호구역_성북구.json"
+ZONE_CRS = "EPSG:5181"      # 경찰청 API 도형 좌표계. 같은 시설의 CSV 좌표와 비교해 중앙값 37m 차이로 확인
+HYDRANT_LIMIT_M = 140       # 소방용수까지 거리 기준(m). 법 기준값은 확인 전이라 바꿔 쓸 수 있게 상수로 둠
+
+
+def rule3(d: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """보호구역 안전시설 공백: 보호구역 경계(없으면 시설 점)에서 가장 가까운 소방용수까지 거리가 기준을 넘는 곳."""
+    if not ZONE_FILE.exists():
+        return pd.DataFrame(columns=["규칙", "종류", "이름", "주소", "lat", "lon", "사유", "거리"])
+    zones = json.loads(ZONE_FILE.read_text(encoding="utf-8"))
+    to_m = Transformer.from_crs("EPSG:4326", ZONE_CRS, always_xy=True)
+    to_ll = Transformer.from_crs(ZONE_CRS, "EPSG:4326", always_xy=True)
+    s, n, w, e = BOX
+    h = d["소방용수"].dropna(subset=["lat", "lon"])
+    h = h[(h.lat > s) & (h.lat < n) & (h.lon > w) & (h.lon < e)]
+    hx, hy = to_m.transform(h["lon"].to_numpy(), h["lat"].to_numpy())
+    pts = shapely.points(hx, hy)
+    rows = []
+    for z in zones:
+        g = wkt.loads(z["fturGeomVl"])
+        parts = list(getattr(g, "geoms", [g]))
+        polys = [p for p in parts if p.geom_type == "Polygon"]
+        use = polys if polys else parts  # 도형 하나하나와의 거리 중 최솟값 (합치기는 잘못된 도형에서 실패하므로 안 함)
+        dist = float(min(np.min(shapely.distance(shapely.make_valid(g1), pts)) for g1 in use))
+        c = shapely.make_valid(use[0]).representative_point()
+        lon, lat = to_ll.transform(c.x, c.y)
+        kind = "어린이보호구역" if str(z.get("fcltTypeCd")) == "1" else "노인·장애인보호구역"
+        rows.append({"규칙": "보호구역 소방용수 거리 초과", "종류": kind, "이름": z["trgtFcltNm"],
+                     "주소": z.get("roadNmAddr", ""), "lat": lat, "lon": lon, "거리": dist,
+                     "사유": f"{'경계' if polys else '시설 위치'}에서 가장 가까운 소방용수까지 {dist:.0f}m"})
+    out = pd.DataFrame(rows)
+    out["경계있음"] = [any(p.geom_type == "Polygon" for p in getattr(wkt.loads(z["fturGeomVl"]), "geoms", [])) for z in zones]
+    return out
 
 
 def rule4(raw: pd.DataFrame) -> pd.DataFrame:
@@ -176,7 +215,7 @@ def build_html(points: list[dict], summary: str) -> str:
 #map{{position:absolute;left:300px;right:0;top:0;bottom:0}} h1{{font-size:15px;margin:0 0 8px}} .n{{color:#555}}
 .lg span{{display:inline-block;width:10px;height:10px;border-radius:5px;margin-right:6px}}</style></head><body>
 <div id="side"><h1>성북구 공백 탐지 결과</h1><div class="n">실제 공공데이터 기준 (2026-10-19 내려받음)</div><pre style="white-space:pre-wrap">{summary}</pre>
-<div class="lg"><div><span style="background:#6d28d9"></span>같은 주소에 안전시설 겹침</div><div><span style="background:#b91c1c"></span>소방용수 좌표 이상</div><div><span style="background:#c2410c"></span>소방용수 사용불가 표시</div></div></div>
+<div class="lg"><div><span style="background:#6d28d9"></span>같은 주소에 안전시설 겹침</div><div><span style="background:#b91c1c"></span>소방용수 좌표 이상</div><div><span style="background:#c2410c"></span>소방용수 사용불가 표시</div><div><span style="background:#0f766e"></span>보호구역 소방용수 거리 초과</div></div></div>
 <div id="map"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -195,13 +234,17 @@ def main() -> None:
     r1 = rule1(d["소방용수"])
     r2 = rule2(all_)
     r4 = rule4(fw_raw)
+    r3_all = rule3(d)
+    r3 = r3_all[r3_all["거리"] > HYDRANT_LIMIT_M] if len(r3_all) else r3_all
     kinds4 = r4["세부"].value_counts()
     sites = r2.groupby("주소키")
     n_sites = sites.ngroups
     combo = sites["종류"].apply(lambda x: "·".join(sorted(set(x)))).value_counts()
 
     cols = ["규칙", "종류", "이름", "주소", "lat", "lon", "사유"]
-    res = pd.concat([r1[cols], r2[cols], r4[cols]], ignore_index=True)
+    res = pd.concat([r1[cols], r2[cols], r4[cols]], ignore_index=True)  # 규칙 3은 백엔드 적재 형식을 건드리지 않도록 별도 파일로 저장
+    if len(r3_all):
+        r3_all.drop(columns=["규칙"]).to_csv(ROOT / "data" / "gap_zone_distance.csv", index=False, encoding="utf-8-sig")
     out = ROOT / "data" / "gap_candidates.csv"
     res.to_csv(out, index=False, encoding="utf-8-sig")
 
@@ -210,7 +253,8 @@ def main() -> None:
                + "\n".join(f"  {k}: {v}곳" for k, v in combo.items())
                + f"\n규칙4 소방용수 갱신 정체: {len(r4)}건 (시설번호 기준)\n"
                + "\n".join(f"  {k}: {v}건" for k, v in kinds4.items())
-               + "\n규칙3 보호구역 경계 밖: 경계 데이터 없음, 계산 안 함")
+               + (f"\n규칙3 보호구역 {len(r3_all)}곳 중 소방용수까지 {HYDRANT_LIMIT_M}m 초과: {len(r3)}곳"
+                  f" (경계 도형이 있는 곳 {int(r3_all['경계있음'].sum())}곳)" if len(r3_all) else "\n규칙3 보호구역 경계 데이터 없음"))
     print(summary)
 
     points = []
@@ -218,6 +262,8 @@ def main() -> None:
         points.append({"lat": r["lat"], "lon": r["lon"], "c": "#6d28d9", "t": f"{r['종류']} {r['이름']}<br>{r['사유']}"})
     for _, r in r4[r4["세부"] == "사용불가 표시"].dropna(subset=["lat", "lon"]).iterrows():
         points.append({"lat": r["lat"], "lon": r["lon"], "c": "#c2410c", "t": f"{r['이름']}<br>{r['사유']}"})
+    for _, r in r3.dropna(subset=["lat", "lon"]).iterrows():
+        points.append({"lat": r["lat"], "lon": r["lon"], "c": "#0f766e", "t": f"{r['이름']} ({r['종류']})<br>{r['사유']}"})
     for _, r in r1.dropna(subset=["lat", "lon"]).iterrows():
         points.append({"lat": r["lat"], "lon": r["lon"], "c": "#b91c1c", "t": f"{r['이름']}<br>{r['사유']}"})
     (ROOT / "poc" / "gap_map.html").write_text(build_html(points, summary), encoding="utf-8")
