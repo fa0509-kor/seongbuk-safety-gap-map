@@ -11,7 +11,7 @@
 | --- | --- | --- | --- |
 | 백엔드 실행, 키 없이 로컬 동작 (SQLite·로컬 사진·Mock AI) | ✅ | `backend/app/` | `uvicorn backend.app.main:app --reload` → `/api/health` |
 | 사진 업로드 → 줄이기·EXIF 제거 → AI 분류 | ✅ | `routers/photos.py`, `storage.py`, `vision.py` | `/docs`에서 `POST /api/photos` |
-| AI 분류 공급자 전환 (OpenAI / Anthropic / Mock, 실패 시 Mock) | 🟡 | `vision.py`, 프롬프트 `prompts/vision_v1.txt` | 실제 키로는 아직 미확인 |
+| AI 분류: Claude API (실패 시 Mock으로 대체, OpenAI도 전환 가능) | ✅ | `vision.py`, 프롬프트 `prompts/vision_v1.txt` | 10/26 로컬에서 실제 분류 확인. `/api/health`의 `vision_provider: anthropic` |
 | 주민 제보 저장, 내 제보 조회, 빨간 점 | ✅ | `routers/reports.py`, `frontend/src/lib/myReports.js` | 아래 시연 흐름 |
 | 관리자 목록·상세·상태 변경·메모·조치 후 사진·오탐·출동 | ✅ | `routers/admin.py` | 아래 시연 흐름 |
 | CCTV 프레임 업로드 (주민 사진과 같은 분류) | ✅ | `AdminList.jsx` | 관리자 목록 오른쪽 위 버튼 |
@@ -41,7 +41,7 @@
 | --- | --- | --- | --- |
 | 1 | 디자인 시안(Figma)대로 화면 다시 그리기 | 디자인 → 개발 | 디자인이 Figma로 화면 → 개발이 반영 → 캡처를 PPT에 (decisions.md 10/20). `pages/*.jsx`의 데이터 함수(api.js 호출)는 그대로 두고 JSX·스타일만 교체. 색은 `src/index.css`의 `@theme` |
 | 2 | 체험용 사진 넣기 | 개발 | `frontend/public/demo/sample.jpg`. **직접 찍은 사진만** (AI-Hub 사진은 약관상 공개 레포에 넣으면 안 됨) |
-| 3 | 실제 AI 키로 분류 확인 | 개발 | `.env`에 `OPENAI_API_KEY` → `/api/health`의 `vision_provider`가 openai인지 |
+| 3 | 실제 AI 분류 배포 | PM | ✅ 로컬 확인(10/26). Vercel에 `ANTHROPIC_API_KEY`, `VISION_PROVIDER=anthropic` (Production·Preview) → 폰에서 사진 2~3장 확인 |
 | 4 | 학습 모델 연결 | 개발 | `vision.py`의 `PROVIDERS`에 `model` 추가. ONNX로 내보내면 Vercel 함수 용량(파이썬 500MB) 안에 들어감 |
 | 5 | AI 학습 데이터 만들기 (조각 자르기·분할) | 개발 | ✅ 10/25 조각·분할 완료 (`poc/make_crack_patches.py`, 통계 `data/ai_patch_stats.md`). 조각 10,262개는 `data/raw/aihub/patches_v1/`(올리지 않음). 남은 일: 이 PC에서 학습 → ONNX. 학습은 본인 PC에서 (국외 반출 금지) |
 | 6 | 지역급경사지 데이터 연결 → '관리목록 밖' 가산점 켜기 | 개발 | API 키 받으면 가져오기 스크립트. 벤치마크 ② 근거 (`docs/benchmark.md`) |
