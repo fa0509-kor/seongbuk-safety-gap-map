@@ -43,7 +43,8 @@
 | 2 | 체험용 사진 넣기 | 개발 | `frontend/public/demo/sample.jpg`. **직접 찍은 사진만** (AI-Hub 사진은 약관상 공개 레포에 넣으면 안 됨) |
 | 3 | 실제 AI 키로 분류 확인 | 개발 | `.env`에 `OPENAI_API_KEY` → `/api/health`의 `vision_provider`가 openai인지 |
 | 4 | 학습 모델 연결 | 개발 | `vision.py`의 `PROVIDERS`에 `model` 추가. ONNX로 내보내면 Vercel 함수 용량(파이썬 500MB) 안에 들어감 |
-| 5 | AI 학습 데이터 만들기 (조각 자르기·분할) | 개발 | ✅ 10/25 조각·분할 완료 (`poc/make_crack_patches.py`, 통계 `data/ai_patch_stats.md`). 조각 10,262개는 `data/raw/aihub/patches_v1/`(올리지 않음). 남은 일: 이 PC에서 학습 → ONNX. 학습은 본인 PC에서 (국외 반출 금지) |
+| 5 | AI 학습 데이터 만들기 (조각 자르기·분할) | 개발 | ✅ 10/25 조각 10,262개 (`poc/make_crack_patches.py`, 통계 `data/ai_patch_stats.md`). 조각은 `data/raw/aihub/patches_v1/`(올리지 않음) |
+| 5-1 | 분류 모델 1차 학습 (MobileNetV3-Small, 이 PC CPU) | 개발 | ✅ 10/25 시험 정확도 60.4%, 클래스별 재현율 평균 54.6%. 백태·누수 재현율 9.7%로 낮음 → 개선 검토. 결과 `data/ai_eval.md`, 코드 `poc/train_crack_classifier.py`. ONNX(6.1MB)는 `data/raw/aihub/model_v1/`에만 있고 올리지 않음 (앱 연결·저장소 포함 여부는 팀 결정, 출처 표기 필요) |
 | 6 | 지역급경사지 데이터 연결 → '관리목록 밖' 가산점 켜기 | 개발 | API 키 받으면 가져오기 스크립트. 벤치마크 ② 근거 (`docs/benchmark.md`) |
 | 7 | 시연 전 테스트 제보 정리, 시연용 제보 3~5건 | PM | 10/20 테스트 제보 1건이 운영 DB에 있음. 팀원이 성북구에서 직접 찍어 앱으로 제보 |
 
