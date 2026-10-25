@@ -72,7 +72,7 @@ def test_period_report():
     assert rep["counts"]["received"] >= 1 and rep["counts"]["done"] >= 1
     assert rep["counts"]["by_facility"].get("공원·놀이시설", 0) >= 1
     assert any(d["dept"] == "공원녹지과 공원관리팀" and d["done"] >= 1 for d in rep["by_dept"])
-    assert len(rep["summary_lines"]) == 6 and "{" not in "".join(rep["summary_lines"])
+    assert len(rep["summary_lines"]) == 7 and "{" not in "".join(rep["summary_lines"])
     assert client.get("/api/admin/report", params={"start": "2026-12-01", "end": "2026-11-01"}).status_code == 400
 
 
@@ -103,3 +103,25 @@ def test_screening_in_summary_and_report():
     rep = client.get("/api/admin/report").json()
     assert rep["screening"]["targets"] == 97
     assert any("먼저 확인할 곳은 97곳" in line for line in rep["summary_lines"])
+
+
+def test_on_time_rate():
+    from datetime import timedelta
+
+    from backend.app.db import SessionLocal
+    from backend.app.models import Report
+
+    before = client.get("/api/admin/summary").json()["on_time"]
+    fast = admin(report()["public_id"])  # 바로 완료 → 기한 안
+    client.patch(f"/api/admin/reports/{fast['id']}", json={"status": "done"})
+    late = admin(report()["public_id"])  # 10일 전 접수, 미완료 → 기한 초과
+    with SessionLocal() as db:
+        r = db.get(Report, late["id"])
+        r.created_at = r.created_at - timedelta(days=10)
+        db.commit()
+    after = client.get("/api/admin/summary").json()["on_time"]
+    assert after["on_time"] == before["on_time"] + 1
+    assert after["due_total"] == before["due_total"] + 2
+    assert after["rate_pct"] == round(after["on_time"] / after["due_total"] * 100)
+    lines = client.get("/api/admin/report").json()["summary_lines"]
+    assert any("기한 안에 조치를 마친 비율" in line for line in lines)
