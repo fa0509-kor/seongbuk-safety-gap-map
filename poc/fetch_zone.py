@@ -3,7 +3,7 @@
 실행: python poc/fetch_zone.py
 키: 프로젝트 루트 .env 의 DATA_GO_KR_AED_KEY (공공데이터포털 일반 인증키, 같은 계정이면 같은 키)
 API: 경찰청_전국 보호구역 현황 /1320000/safetyzonedtlinfo/getdtllist (sggCd=11290 성북구)
-저장: data/raw/보호구역_성북구.json (응답 원본), 도형 좌표는 WKT 문자열이며 좌표계는 EPSG:5174로 보임
+저장: data/raw/보호구역_성북구.json (응답 원본), 도형 좌표는 WKT 문자열이며 좌표계는 EPSG:5181 (같은 시설의 CSV 좌표와 비교해 확인)
 """
 from __future__ import annotations
 
