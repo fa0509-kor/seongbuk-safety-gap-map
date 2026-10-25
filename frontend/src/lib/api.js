@@ -24,6 +24,7 @@ export const api = {
   // 지도
   facilities: () => request('/api/facilities'),
   gaps: () => request('/api/gaps'),
+  zones: () => request('/api/zones'), // 보호구역 경계 (경계 있는 곳 MultiPolygon, 없는 곳 Point)
   reportsMap: () => request('/api/reports/map'),
 
   // 사진: 저장 + AI 분류. 응답 { key, url, ai: { category, confidence, alternatives, reason, mock } }
