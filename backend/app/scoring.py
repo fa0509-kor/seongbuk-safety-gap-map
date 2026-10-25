@@ -161,3 +161,28 @@ def score(r) -> dict:
         due_at = _aware(r.created_at) + timedelta(days=DUE_DAYS_URGENT if urgent else DUE_DAYS_NORMAL)
         overdue = r.status != "done" and not r.false_positive and datetime.now(timezone.utc) > due_at
     return {"total": total, "items": items, "urgent": urgent, "due_at": due_at, "overdue": overdue}
+
+
+def done_at(r) -> datetime | None:
+    """처음 '완료'로 바뀐 시각 (처리 이력 기준). r.history가 로드돼 있어야 한다."""
+    h = next((h for h in r.history if h.to_status == "done"), None)
+    return _aware(h.created_at) if h else None
+
+
+def on_time(rows) -> dict:
+    """기한 내 조치율 = 기한 안에 완료한 건 / 기한이 이미 지났거나 완료된 건.
+    대상: 기한이 있는 제보(주민·CCTV)만. 공백 후보·체험용·오탐은 뺀다.
+    기한 초과 미완료는 '못 지킨 건'으로 분모에 들어가고, 기한이 남은 미완료는 아직 판단하지 않는다."""
+    now = datetime.now(timezone.utc)
+    met = due = 0
+    for r in rows:
+        if r.source == "gap" or r.is_demo or r.false_positive:
+            continue
+        s = score(r)
+        d = done_at(r) if r.status == "done" else None
+        if d is not None:
+            due += 1
+            met += d <= s["due_at"]
+        elif s["due_at"] and now > s["due_at"]:
+            due += 1
+    return {"on_time": met, "due_total": due, "rate_pct": round(met / due * 100) if due else None}

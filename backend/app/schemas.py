@@ -114,12 +114,19 @@ class Screening(BaseModel):
     by_rule: dict[str, int]
 
 
+class OnTime(BaseModel):
+    on_time: int = Field(description="기한 안에 완료한 건")
+    due_total: int = Field(description="기한이 지났거나 완료된 건 (판단 대상)")
+    rate_pct: int | None = Field(None, description="on_time / due_total (%). 대상이 없으면 null")
+
+
 class AdminSummary(BaseModel):
     today_new: int = Field(description="오늘(한국 시간) 들어온 주민·CCTV 제보 (공백 후보 제외)")
     overdue_open: int = Field(description="기한이 지났는데 완료가 아닌 건")
     done_this_month: int
     avg_days_to_done: float | None = Field(None, description="완료된 건의 접수→완료 평균 일수. 완료 건이 없으면 null")
     open_by_status: dict[str, int]
+    on_time: OnTime = Field(description="기한 내 조치율 (주민·CCTV 제보, 체험용·오탐 제외)")
     screening: Screening = Field(description="데이터 사전 점검 지표 (docs/benchmark.md)")
 
 

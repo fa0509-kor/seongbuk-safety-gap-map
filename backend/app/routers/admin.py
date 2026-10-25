@@ -58,6 +58,7 @@ def summary(db: Session = Depends(get_db)):
     return {"today_new": today_new, "overdue_open": overdue, "done_this_month": done_month,
             "avg_days_to_done": round(sum(durations) / len(durations), 1) if durations else None,
             "open_by_status": open_by_status,
+            "on_time": scoring.on_time(rows),
             "screening": screening.screening([r for r in rows if not r.is_demo])}
 
 
