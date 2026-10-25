@@ -15,7 +15,7 @@ import AdminReport from './pages/admin/AdminReport.jsx'
 function ResidentLayout() {
   return (
     <div className="mx-auto flex h-full max-w-md flex-col">
-      <main className="flex-1 overflow-y-auto pb-16">
+      <main className="flex-1 overflow-y-auto pb-[88px]">
         <Outlet />
       </main>
       <BottomBar />
