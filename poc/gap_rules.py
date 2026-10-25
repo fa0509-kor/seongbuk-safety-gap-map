@@ -92,7 +92,7 @@ def rule2(all_: pd.DataFrame) -> pd.DataFrame:
 
 ZONE_FILE = RAW / "보호구역_성북구.json"
 ZONE_CRS = "EPSG:5181"      # 경찰청 API 도형 좌표계. 같은 시설의 CSV 좌표와 비교해 중앙값 37m 차이로 확인
-HYDRANT_LIMIT_M = 140       # 소방용수까지 거리 기준(m). 법 기준값은 확인 전이라 바꿔 쓸 수 있게 상수로 둠
+HYDRANT_LIMIT_M = 140       # 소방용수까지 거리 기준(m). 소방기본법 시행규칙 별표3: 주거·상업·공업지역 100m, 그 외 140m (docs/decisions.md). 이 규칙은 140m만 봄
 
 
 def rule3(d: dict[str, pd.DataFrame]) -> pd.DataFrame:
