@@ -82,3 +82,57 @@ def test_overdue_and_summary():
 
     st = client.get("/api/stats").json()
     assert st["week_reports"] >= 1 and st["week_done"] >= 1
+
+
+# --- 보호구역 경계 판단 (경계가 있는 곳은 경계 안, 없는 곳만 반경 300m) ---
+SQUARE = [[127.000, 37.600], [127.001, 37.600], [127.001, 37.601], [127.000, 37.601], [127.000, 37.600]]  # 약 88m x 111m
+HOLE = [[127.0004, 37.6004], [127.0006, 37.6004], [127.0006, 37.6006], [127.0004, 37.6006], [127.0004, 37.6004]]
+NO_BOUNDARY_POINT = (37.700, 127.100)
+
+
+def fake_zones(monkeypatch):
+    monkeypatch.setattr(scoring, "zone_shapes", lambda: [
+        {"name": "경계있는곳", "polys": [[SQUARE, HOLE]], "point": (37.6000, 127.0000)},
+        {"name": "경계없는곳", "polys": [], "point": NO_BOUNDARY_POINT},
+    ])
+
+
+def test_zone_hit_boundary_vs_radius(monkeypatch):
+    fake_zones(monkeypatch)
+    inside = scoring.zone_hit(37.6008, 127.0008)
+    assert inside["name"] == "경계있는곳" and inside["how"] == "boundary"
+    assert scoring.zone_hit(37.6005, 127.0005) is None          # 구멍 안은 해당 없음
+    # 경계 있는 곳은 시설 위치에서 300m 안이어도 경계 밖이면 해당 없음 (예전 방식과 다른 점)
+    assert scoring.zone_hit(37.6000, 127.0030) is None          # 시설 위치에서 약 265m, 경계 밖
+    near = scoring.zone_hit(NO_BOUNDARY_POINT[0] + 0.002, NO_BOUNDARY_POINT[1])  # 약 220m
+    assert near["name"] == "경계없는곳" and near["how"] == "radius"
+    assert scoring.zone_hit(NO_BOUNDARY_POINT[0] + 0.005, NO_BOUNDARY_POINT[1]) is None  # 약 550m
+    assert scoring.zone_hit(None, None) is None
+
+
+def test_zone_bonus_uses_boundary(monkeypatch):
+    fake_zones(monkeypatch)
+    base = scoring.TYPE_POINTS["콘크리트 균열"]
+    inside = admin_item(make(37.6008, 127.0008)["public_id"])
+    outside = admin_item(make(37.6000, 127.0030)["public_id"])
+    assert inside["priority"]["total"] == base + scoring.SCHOOL_ZONE_POINTS
+    assert any("경계 안" in (i["note"] or "") for i in inside["priority"]["items"])
+    assert outside["priority"]["total"] == base
+
+
+def test_real_zone_file_loads():
+    zs = scoring.zone_shapes()
+    assert zs, "backend/data/zones.geojson 이 없음: python backend/scripts/build_zones.py"
+    with_boundary = [z for z in zs if z["polys"]]
+    assert with_boundary and len(with_boundary) < len(zs)         # 경계 있는 곳과 없는 곳이 모두 있음
+    z = with_boundary[0]
+    ring = z["polys"][0][0]
+    # 경계 위의 꼭짓점들이 서로 다른 값이고 고리가 닫혀 있음
+    assert ring[0] == ring[-1] and len(set(map(tuple, ring))) >= 3
+
+
+def test_zones_api():
+    body = client.get("/api/zones").json()
+    assert body["type"] == "FeatureCollection" and body["features"]
+    kinds = {f["properties"]["kind"] for f in body["features"]}
+    assert "어린이" in kinds

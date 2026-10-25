@@ -23,10 +23,11 @@
 | --- | --- | --- |
 | GET | `/api/facilities` | GeoJSON. `properties: {kind: 소방용수/무더위쉼터/AED/어린이보호구역, name, address}` |
 | GET | `/api/gaps` | 주민 지도 '점검 필요(규칙)': 소방용수 사용불가 + 거리 기준 초과 의심. GeoJSON `properties: {rule, reason, address, kinds[]}`. **AI가 아니라 규칙 결과** → 화면에 "규칙"으로 표시 |
+| GET | `/api/zones` | 보호구역 경계 (경찰청 API). GeoJSON. 경계가 있으면 `MultiPolygon`, 없으면 `Point`(시설 위치). `properties: {name, kind: 어린이/노인·장애인, has_boundary, point:[경도,위도], address}`. 주민 지도에 얇은 선으로 그림 |
 | GET | `/api/admin/integrated` | 관리자용 통합 점검 후보(같은 주소에 안전시설 2종 이상). 형식은 위와 같음. 공백이 아님 |
 | GET | `/api/reports/map?include_demo=false` | **주민 제보만**. GeoJSON `properties: {public_id, source, status, status_label, category, facility_label, confirm_count, created_at}`. 오탐 제외 |
 
-`/api/facilities`, `/api/gaps`, `/api/admin/integrated` 는 `backend/data/*.geojson` 을 그대로 내보낸다 (`python backend/scripts/build_geojson.py` 로 생성).
+`/api/facilities`, `/api/gaps`, `/api/admin/integrated` 는 `backend/data/*.geojson` 을 그대로 내보낸다 (`python backend/scripts/build_geojson.py` 로 생성). `/api/zones`는 `backend/data/zones.geojson` (`python backend/scripts/build_zones.py` 로 생성, 원본은 `data/raw/보호구역_성북구.json`).
 
 ## 집계
 | 메서드 | 주소 | 설명 |

@@ -3,7 +3,7 @@
 기능을 이어받을 때 이 파일부터 본다. PR을 올릴 때마다 해당 줄을 갱신한다.
 상태: ✅ 동작 확인 / 🟡 동작하지만 화면은 임시 / ⬜ 미착수 / ⛔ 결정·데이터 대기
 
-마지막 갱신: 2026-10-20 낮 (부서 배정·보고서·통합 점검 후보·+1·핀 조정).
+마지막 갱신: 2026-10-25 (보호구역 경계를 점수와 주민 지도에 반영, AI 학습 조각 생성).
 
 ## 1. 지금 되는 것
 
@@ -23,6 +23,7 @@
 | 대시보드 집계(오늘 신규·기한 초과·이번 달 완료·평균 처리 기간), 첫 화면 이번 주 건수 | ✅ | `GET /api/admin/summary`, `GET /api/stats` | `/admin`, `/` |
 | 부서 자동 배정 (제보 때 시설 종류 선택 → 부서), 관리자 재배정·이력 | ✅ | `backend/app/departments.py`, 부서 표 `docs/departments.md` | 제보 3단계 시설 종류 → 관리자 상세 '담당 부서' |
 | 기간별 보고서 (고정 양식 + DB 집계, 인쇄·PDF) | ✅ | `routers/report.py`, `pages/admin/AdminReport.jsx` | `/admin/report` |
+| 어린이보호구역 실제 경계: 점수 '경계 안이면 +30'(경계 없는 22곳은 반경 300m), 주민 지도에 경계선 | ✅ | `backend/app/scoring.py`(`zone_hit`), `backend/scripts/build_zones.py`, `GET /api/zones`, `MapPage.jsx` | `/map` 에서 얇은 경계선 확인, `python -m pytest backend/tests -q` |
 | 나도 봤어요(+1) → 우선순위 점수 반영 | ✅ | `POST /api/reports/{id}/confirm`, `MapPage.jsx` | 주민 지도에서 남의 제보 누르기 |
 | 제보 위치 핀 조정 (끌기·지도 누르기) | ✅ | `components/PinPicker.jsx` | `/report` 2단계. 위치 자동은 https에서만 |
 | 백엔드 테스트 18개 (시연 흐름·점수·적재·집계·부서·보고서·+1) | ✅ | `backend/tests/` | `python -m pytest backend/tests -q` |

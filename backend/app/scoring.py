@@ -21,7 +21,7 @@ GAP_POINTS = {
     "hydrant_distance_100": 15,    # 100~140m (주거·상업·공업지역이면 기준 초과)
     "hydrant_coord": 10,           # 소방용수 좌표 누락·이상
 }
-SCHOOL_ZONE_RADIUS_M = 300      # 보호구역 지정 기준(시설 주출입문 반경 300m). 경계 데이터 오기 전 대용
+SCHOOL_ZONE_RADIUS_M = 300      # 보호구역 지정 기준(시설 주출입문 반경 300m). 경계가 없는 보호구역에만 쓴다 (경계가 있으면 경계 안인지로 판단)
 SCHOOL_ZONE_POINTS = 30
 OUTSIDE_LIST_POINTS = 20        # 관리목록(해빙기 점검 326개소) 밖. 목록을 받기 전까지 계산하지 않음
 OUTSIDE_LIST_READY = False
@@ -60,6 +60,62 @@ def nearest_school(lat: float | None, lon: float | None) -> tuple[str, float] | 
     return best if best and best[1] <= SCHOOL_ZONE_RADIUS_M else None
 
 
+@lru_cache(maxsize=1)
+def zone_shapes() -> list[dict]:
+    """어린이보호구역의 경계와 시설 위치 (backend/data/zones.geojson, build_zones.py가 만듦). 파일이 없으면 빈 목록.
+    [{name, polys: [[고리, ...], ...], point: (위도, 경도) | None}] — polys가 비어 있으면 경계 정보가 없는 곳."""
+    p = config.PROCESSED_DIR / "zones.geojson"
+    if not p.exists():
+        return []
+    out = []
+    for f in json.loads(p.read_text(encoding="utf-8"))["features"]:
+        pr, g = f["properties"], f["geometry"]
+        if pr.get("kind") != "어린이":
+            continue
+        pt = pr.get("point")
+        out.append({"name": pr["name"], "polys": g["coordinates"] if g["type"] == "MultiPolygon" else [],
+                    "point": (pt[1], pt[0]) if pt else None})
+    return out
+
+
+def _in_ring(lat: float, lon: float, ring: list[list[float]]) -> bool:
+    """점이 고리 안에 있는지 (ray casting). 좌표는 [경도, 위도]."""
+    inside = False
+    j = len(ring) - 1
+    for i in range(len(ring)):
+        xi, yi = ring[i]
+        xj, yj = ring[j]
+        if (yi > lat) != (yj > lat) and lon < (xj - xi) * (lat - yi) / (yj - yi) + xi:
+            inside = not inside
+        j = i
+    return inside
+
+
+def in_polygon(lat: float, lon: float, rings: list[list[list[float]]]) -> bool:
+    """rings[0]은 바깥 고리, 나머지는 구멍."""
+    return _in_ring(lat, lon, rings[0]) and not any(_in_ring(lat, lon, h) for h in rings[1:])
+
+
+def zone_hit(lat: float | None, lon: float | None) -> dict | None:
+    """어린이보호구역에 해당하는지. 경계가 있는 곳은 경계 안이면, 경계가 없는 곳은 시설 반경 300m 안이면 해당.
+    경계 파일이 없으면 예전 방식(시설 위치 반경 300m)으로 판단. 해당 없으면 None."""
+    if lat is None or lon is None:
+        return None
+    zs = zone_shapes()
+    if not zs:
+        s = nearest_school(lat, lon)
+        return {"name": s[0], "how": "radius", "dist": s[1]} if s else None
+    for z in zs:
+        if any(in_polygon(lat, lon, rings) for rings in z["polys"]):
+            return {"name": z["name"], "how": "boundary", "dist": None}
+    for z in zs:
+        if not z["polys"] and z["point"]:
+            d = distance_m(lat, lon, *z["point"])
+            if d <= SCHOOL_ZONE_RADIUS_M:
+                return {"name": z["name"], "how": "radius", "dist": d}
+    return None
+
+
 def _aware(dt: datetime) -> datetime:
     return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
 
@@ -82,10 +138,11 @@ def score(r) -> dict:
     # 보호구역 가산은 사진으로 확인된 결함(주민·CCTV)에만. 어린이 동선 위의 결함이라는 뜻이라
     # 소방용수 같은 공백 후보에는 붙이지 않는다 (붙이면 공백 후보가 목록 상단을 다 차지함, decisions.md)
     if r.source != "gap":
-        school = nearest_school(r.lat, r.lon)
-        if school:
-            items.append({"label": "어린이보호구역 인접", "points": SCHOOL_ZONE_POINTS,
-                          "note": f"{school[0]} {school[1]:.0f}m (반경 {SCHOOL_ZONE_RADIUS_M}m)"})
+        hit = zone_hit(r.lat, r.lon)
+        if hit:
+            note = (f"{hit['name']} 보호구역 경계 안" if hit["how"] == "boundary"
+                    else f"{hit['name']} {hit['dist']:.0f}m (경계 정보 없음, 반경 {SCHOOL_ZONE_RADIUS_M}m)")
+            items.append({"label": "어린이보호구역 인접", "points": SCHOOL_ZONE_POINTS, "note": note})
         elif r.lat is None:
             items.append({"label": "어린이보호구역 인접", "points": 0, "note": "위치 없음"})
 

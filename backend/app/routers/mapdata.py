@@ -34,3 +34,9 @@ def gaps() -> dict:
 def integrated() -> dict:
     """관리자용 통합 점검 후보: 같은 주소에 서로 다른 안전시설 2종 이상 (공백이 아님)."""
     return _load("integrated.geojson")
+
+
+@router.get("/api/zones")
+def zones() -> dict:
+    """보호구역 경계 (경찰청 API). 경계가 있으면 MultiPolygon, 없으면 Point. 주민 지도에 얇은 선으로 그린다."""
+    return _load("zones.geojson")
