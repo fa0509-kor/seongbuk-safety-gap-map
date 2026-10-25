@@ -40,7 +40,7 @@
 | 2 | 체험용 사진 넣기 | 개발 | `frontend/public/demo/sample.jpg`. **직접 찍은 사진만** (AI-Hub 사진은 약관상 공개 레포에 넣으면 안 됨) |
 | 3 | 실제 AI 키로 분류 확인 | 개발 | `.env`에 `OPENAI_API_KEY` → `/api/health`의 `vision_provider`가 openai인지 |
 | 4 | 학습 모델 연결 | 개발 | `vision.py`의 `PROVIDERS`에 `model` 추가. ONNX로 내보내면 Vercel 함수 용량(파이썬 500MB) 안에 들어감 |
-| 5 | AI 학습 데이터 만들기 (조각 자르기·분할) | 개발 | decisions.md 'AI 학습 방향'. 학습은 본인 PC에서 (국외 반출 금지) |
+| 5 | AI 학습 데이터 만들기 (조각 자르기·분할) | 개발 | ✅ 10/25 조각·분할 완료 (`poc/make_crack_patches.py`, 통계 `data/ai_patch_stats.md`). 조각 10,262개는 `data/raw/aihub/patches_v1/`(올리지 않음). 남은 일: 이 PC에서 학습 → ONNX. 학습은 본인 PC에서 (국외 반출 금지) |
 | 6 | 배포 (Vercel + Supabase) | PM | **마지막 단계** (구현·데이터 처리 후). 아래 4번 체크리스트. 레포 공개 완료 |
 
 ## 3. 결정이 필요한 것
