@@ -42,7 +42,7 @@ export default function MapPage() {
     api.zones().then((z) => {
       const poly = z.features.filter((f) => f.geometry.type === 'MultiPolygon' && f.properties.kind === '어린이')
       L.geoJSON({ type: 'FeatureCollection', features: poly }, {
-        pane: 'zones', interactive: false, style: { color: '#334155', weight: 1, opacity: 0.85, fillColor: '#0f766e', fillOpacity: 0.14 },
+        pane: 'zones', interactive: false, style: { color: '#dc2626', weight: 1.5, opacity: 0.8, fillColor: '#f87171', fillOpacity: 0.2 }, // 어린이보호구역 도로 포장색(빨강). 회색 '점검 필요'·주황 '접수' 점과 구분
       }).addTo(map.current)
     }).catch(() => {})
     layer.current = L.layerGroup().addTo(map.current)
@@ -84,7 +84,7 @@ export default function MapPage() {
         {LEGEND.map(([k, label]) => (
           <div key={k} className="flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ background: COLORS[k] }} />{label}</div>
         ))}
-        <div className="flex items-center gap-1"><span className="h-2 w-2 border border-slate-500" />어린이보호구역 경계</div>
+        <div className="flex items-center gap-1"><span className="h-2 w-3 border border-red-600 bg-red-300" />어린이보호구역</div>
       </div>
       {p && (
         <div className="absolute inset-x-0 bottom-16 z-[1000] rounded-t-xl bg-white p-4 shadow-lg">

@@ -24,11 +24,11 @@
 | 데이터 사전 점검 (안전시설 5,807곳 중 먼저 확인할 97곳, 확인 완료 수) — 벤치마크 연결 | ✅ | `backend/app/screening.py`, `AdminDashboard.jsx`, `docs/benchmark.md` | `/admin` 맨 위 |
 | 부서 자동 배정 (제보 때 시설 종류 선택 → 부서), 관리자 재배정·이력 | ✅ | `backend/app/departments.py`, 부서 표 `docs/departments.md` | 제보 3단계 시설 종류 → 관리자 상세 '담당 부서' |
 | 기간별 점검 확인서 (고정 양식 7문장 + DB 집계, 인쇄·PDF) | ✅ | `routers/report.py`, `pages/admin/AdminReport.jsx` | `/admin/report` |
-| 어린이보호구역 실제 경계: 점수 '경계 안이면 +30'(경계 없는 22곳은 반경 300m), 주민 지도에 경계선 | ✅ | `backend/app/scoring.py`(`zone_hit`), `backend/scripts/build_zones.py`, `GET /api/zones`, `MapPage.jsx` | `/map` 에서 얇은 경계선 확인, `python -m pytest backend/tests -q` |
+| 어린이보호구역 실제 경계: 점수 '경계 안 또는 경계에서 30m 이내면 +30'(경계 없는 22곳은 반경 300m), 주민 지도에 빨간 경계 | ✅ | `backend/app/scoring.py`(`zone_hit`), `backend/scripts/build_zones.py`, `GET /api/zones`, `MapPage.jsx` | `/map` 에서 얇은 경계선 확인, `python -m pytest backend/tests -q` |
 | 나도 봤어요(+1) → 우선순위 점수 반영 | ✅ | `POST /api/reports/{id}/confirm`, `MapPage.jsx` | 주민 지도에서 남의 제보 누르기 |
 | 제보 위치 핀 조정 (끌기·지도 누르기) | ✅ | `components/PinPicker.jsx` | `/report` 2단계. 위치 자동은 https에서만 |
 | 대시보드·확인서 '기한 내 조치율' (기한 지난 건 중 기한 안 완료 비율) | ✅ | `scoring.on_time()` | `/admin` 다섯 번째 칸 |
-| 백엔드 테스트 26개 (시연 흐름·점수·적재·집계·부서·보고서·+1·사전 점검·보호구역 경계·조치율) | ✅ | `backend/tests/` | `python -m pytest backend/tests -q` |
+| 백엔드 테스트 28개 (시연 흐름·점수·적재·집계·부서·보고서·+1·사전 점검·보호구역 경계·30m·조치율·AI 응답 처리) | ✅ | `backend/tests/` | `python -m pytest backend/tests -q` |
 
 **시연 흐름 (60초)** — 2026-10-20 배포 주소(seongbuk-safety.vercel.app)에서 폰 LTE로 끝까지 확인
 1. 폰 `/report` → 사진 → AI 결과 → 제보 보내기 → `/my`로 이동

@@ -22,7 +22,7 @@ TEMPLATE = [
     "같은 기간 조치 완료된 항목은 {done}건이며, 접수부터 완료까지 평균 {avg_days}이 걸렸습니다.",
     "기한이 지났는데 완료되지 않은 항목은 현재 {overdue}건입니다.",
     "이 기간 접수 항목 중 기한 판단 대상 {due_total}건에서 기한 안에 조치를 마친 비율은 {on_time_rate}입니다.",
-    "AI가 판별한 결함 유형은 {categories} 순으로 많았습니다. AI 판별은 담당자가 확인한 결과가 아닙니다.",
+    "AI가 판별한 결함 유형(많은 순): {categories}. AI 판별은 담당자가 확인한 결과가 아닙니다.",
     "AI 오탐으로 표시된 항목은 {false_positive}건입니다.",
     "공공데이터 안전시설 {facilities_total}곳 중 규칙으로 먼저 확인할 곳은 {targets}곳이며, 현재 {targets_done}곳 확인을 마쳤습니다. 나머지 시설이 안전하다는 뜻은 아닙니다.",
 ]
@@ -40,7 +40,9 @@ def _parse(d: str | None, default: date) -> date:
 def _duration_text(days: float | None) -> str:
     if days is None:
         return "(완료 건 없음)"
-    return f"{days:.1f}일" if days >= 1 else f"{days * 24:.1f}시간"
+    if days >= 1:
+        return f"{days:.1f}일"
+    return "1시간 미만" if days * 24 < 1 else f"{days * 24:.1f}시간"
 
 
 def _kst_date(dt: datetime) -> date:

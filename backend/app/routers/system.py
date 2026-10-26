@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 from fastapi import APIRouter
 from sqlalchemy import text
 
@@ -39,6 +41,11 @@ def health() -> dict:
             "db_ok": db_ok, "db_error": db_error,
             "storage": config.STORAGE,
             "vision_provider": config.vision_provider(),
+            # AI 연결 점검용: 키 값은 내보내지 않고 '있는지'만. VISION_PROVIDER는 비밀값이 아니라 그대로 보여 줌
+            "vision_check": {"VISION_PROVIDER": os.getenv("VISION_PROVIDER"),
+                             "anthropic_key_set": bool(os.getenv("ANTHROPIC_API_KEY")),
+                             "anthropic_key_prefix_ok": os.getenv("ANTHROPIC_API_KEY", "").startswith("sk-ant-"),
+                             "openai_key_set": bool(os.getenv("OPENAI_API_KEY"))},
             "db_url_check": _db_url_shape(),
             "data_files": sorted(p.name for p in config.PROCESSED_DIR.glob("*")) if config.PROCESSED_DIR.exists() else []}
 

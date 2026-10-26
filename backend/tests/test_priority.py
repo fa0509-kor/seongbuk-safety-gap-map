@@ -101,7 +101,8 @@ def test_zone_hit_boundary_vs_radius(monkeypatch):
     fake_zones(monkeypatch)
     inside = scoring.zone_hit(37.6008, 127.0008)
     assert inside["name"] == "경계있는곳" and inside["how"] == "boundary"
-    assert scoring.zone_hit(37.6005, 127.0005) is None          # 구멍 안은 해당 없음
+    hole = scoring.zone_hit(37.6005, 127.0005)                  # 구멍 가운데: 경계 밖이지만 구멍 가장자리에서 30m 안
+    assert hole["how"] == "near" and hole["dist"] < scoring.ZONE_BUFFER_M
     # 경계 있는 곳은 시설 위치에서 300m 안이어도 경계 밖이면 해당 없음 (예전 방식과 다른 점)
     assert scoring.zone_hit(37.6000, 127.0030) is None          # 시설 위치에서 약 265m, 경계 밖
     near = scoring.zone_hit(NO_BOUNDARY_POINT[0] + 0.002, NO_BOUNDARY_POINT[1])  # 약 220m
@@ -136,3 +137,15 @@ def test_zones_api():
     assert body["type"] == "FeatureCollection" and body["features"]
     kinds = {f["properties"]["kind"] for f in body["features"]}
     assert "어린이" in kinds
+
+
+def test_zone_buffer_30m(monkeypatch):
+    fake_zones(monkeypatch)
+    # SQUARE 동쪽 변(경도 127.001)에서 바깥으로: 0.0002도 ≈ 17.6m, 0.0005도 ≈ 44m
+    near = scoring.zone_hit(37.6005, 127.0012)
+    assert near["how"] == "near" and 15 < near["dist"] < 20
+    assert scoring.zone_hit(37.6005, 127.0015) is None
+    base = scoring.TYPE_POINTS["콘크리트 균열"]
+    item = admin_item(make(37.6005, 127.0012)["public_id"])
+    assert item["priority"]["total"] == base + scoring.SCHOOL_ZONE_POINTS
+    assert any("경계에서" in (i["note"] or "") and "30m 이내" in (i["note"] or "") for i in item["priority"]["items"])
