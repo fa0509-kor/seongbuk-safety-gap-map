@@ -43,7 +43,7 @@
 | 2 | 체험용 사진 넣기 | 개발 | `frontend/public/demo/sample.jpg`. **직접 찍은 사진만** (AI-Hub 사진은 약관상 공개 레포에 넣으면 안 됨) |
 | 3 | 실제 AI 분류 배포 | PM | ✅ 로컬 확인(10/26). Vercel에 `ANTHROPIC_API_KEY`, `VISION_PROVIDER=anthropic` (Production·Preview) → 폰에서 사진 2~3장 확인 |
 | 4 | 학습 모델 연결 | 개발 | `vision.py`의 `PROVIDERS`에 `model` 추가. ONNX로 내보내면 Vercel 함수 용량(파이썬 500MB) 안에 들어감 |
-| 5 | AI 학습 데이터 만들기 (조각 자르기·분할) | 개발 | ✅ 10/25 조각·분할 완료 (`poc/make_crack_patches.py`, 통계 `data/ai_patch_stats.md`). 조각 10,262개는 `data/raw/aihub/patches_v1/`(올리지 않음). 남은 일: 이 PC에서 학습 → ONNX. 학습은 본인 PC에서 (국외 반출 금지) |
+| 5 | AI 학습 데이터 만들기 (조각 자르기·분할) | 개발 | ✅ 10/25 조각·분할 완료 (`poc/make_crack_patches.py`, 통계 `data/ai_patch_stats.md`). 조각 10,262개는 `data/raw/aihub/patches_v1/`(올리지 않음). 10/26 1차 학습 3회 완료 → 3차(MobileNetV3-Large) 채택, 시험 정확도 56.2%·평균 재현율 58.9%, 백태·누수 11.7% (`data/ai_train_results.md`). 남은 일: 백태·누수 개선 후 재학습 → ONNX. 학습은 본인 PC에서 (국외 반출 금지) |
 | 6 | 지역급경사지 데이터 연결 → '관리목록 밖' 가산점 켜기 | 개발 | API 키 받으면 가져오기 스크립트. 벤치마크 ② 근거 (`docs/benchmark.md`) |
 | 7 | 시연 전 테스트 제보 정리, 시연용 제보 3~5건 | PM | 10/20 테스트 제보 1건이 운영 DB에 있음. 팀원이 성북구에서 직접 찍어 앱으로 제보 |
 
