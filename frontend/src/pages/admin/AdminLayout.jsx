@@ -10,7 +10,7 @@ export default function AdminLayout() {
         <NavLink to="/admin" end className={link}>대시보드</NavLink>
         <NavLink to="/admin/reports" className={link}>목록</NavLink>
         <NavLink to="/admin/integrated" className={link}>통합 점검 후보</NavLink>
-        <NavLink to="/admin/report" className={link}>보고서</NavLink>
+        <NavLink to="/admin/report" className={link}>점검 확인서</NavLink>
       </header>
       <main className="mx-auto max-w-6xl p-6 print:p-0"><Outlet /></main>
     </div>
