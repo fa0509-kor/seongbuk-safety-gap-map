@@ -62,7 +62,7 @@ export default function AdminDashboard() {
       <Screening s={summary?.screening} />
       <div className="grid grid-cols-5 gap-3">
         {cards.map(([k, v]) => (
-          <div key={k} className="rounded-lg bg-white p-4 shadow-sm"><div className="text-sm text-gray-500">{k}</div><div className="text-2xl font-semibold">{v ?? '—'}</div></div>
+          <div key={k} className="rounded-lg bg-white p-4 shadow-sm"><div className="break-keep text-sm text-gray-500">{k}</div><div className="break-keep text-2xl font-semibold">{v ?? '—'}</div></div>
         ))}
       </div>
       <div>

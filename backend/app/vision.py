@@ -10,7 +10,6 @@ from __future__ import annotations
 import base64
 import json
 import logging
-import re
 from pathlib import Path
 
 from . import config
@@ -30,10 +29,15 @@ def _conf(v) -> int:
 
 def parse_result(text: str) -> dict:
     """모델 응답에서 JSON을 꺼내 허용값으로 보정. 보정했으면 fixed에 남기고 로그를 쓴다."""
-    m = re.search(r"\{.*\}", text, re.S)
-    if not m:
+    start = text.find("{")
+    if start < 0:
         raise ValueError(f"JSON 없음: {text[:200]!r}")
-    data = json.loads(m.group(0))
+    try:
+        # 첫 번째 JSON 객체만 읽는다 (뒤에 설명 문장이 붙어도 무시)
+        data, _ = json.JSONDecoder().raw_decode(text[start:])
+    except json.JSONDecodeError:
+        log.warning("vision 응답 JSON 해석 실패 (잘렸거나 형식 오류): %r", text[:400])
+        raise
     fixed = []
     cat = data.get("category")
     if cat not in CATEGORIES:
@@ -68,13 +72,19 @@ def _openai(jpeg: bytes) -> str:
 def _anthropic(jpeg: bytes) -> str:
     import anthropic
     resp = anthropic.Anthropic().messages.create(
-        model=config.ANTHROPIC_VISION_MODEL, max_tokens=300,
+        model=config.ANTHROPIC_VISION_MODEL, max_tokens=1024,  # 한국어 사유가 길면 300에서 잘려 JSON이 깨질 수 있음 (10/26)
         messages=[{"role": "user", "content": [
             {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg",
                                          "data": base64.b64encode(jpeg).decode()}},
             {"type": "text", "text": PROMPT}]}],
     )
-    return resp.content[0].text
+    # 응답 앞쪽에 text가 아닌 블록(예: thinking)이 올 수 있어 text 블록만 골라 합친다
+    text = "".join(getattr(b, "text", "") for b in resp.content if getattr(b, "type", "") == "text")
+    if not text:
+        raise ValueError(f"text 블록 없음: {[getattr(b, 'type', '?') for b in resp.content]}")
+    if resp.stop_reason == "max_tokens":
+        log.warning("vision 응답이 max_tokens에서 잘림")
+    return text
 
 
 def _mock(_jpeg: bytes) -> str:

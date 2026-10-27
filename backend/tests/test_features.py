@@ -125,3 +125,16 @@ def test_on_time_rate():
     assert after["rate_pct"] == round(after["on_time"] / after["due_total"] * 100)
     lines = client.get("/api/admin/report").json()["summary_lines"]
     assert any("기한 안에 조치를 마친 비율" in line for line in lines)
+
+
+def test_vision_parse_tolerates_extra_text():
+    import json as _json
+
+    import pytest
+
+    from backend.app.vision import parse_result
+    body = '{"category": "박리", "confidence": 70, "alternatives": [{"category": "콘크리트 균열", "confidence": 20}], "reason": "표면이 떨어져 나감"}'
+    assert parse_result("```json\n" + body + "\n```")["category"] == "박리"
+    assert parse_result(body + "\n참고: {추가 설명}")["category"] == "박리"  # 뒤에 중괄호 문장이 붙어도
+    with pytest.raises(_json.JSONDecodeError):
+        parse_result(body[:-30])  # 잘린 응답은 실패 → classify가 mock으로 대체

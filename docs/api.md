@@ -15,7 +15,7 @@
 ## 시스템
 | 메서드 | 주소 | 설명 |
 | --- | --- | --- |
-| GET | `/api/health` | `{ok, db: sqlite/postgres, storage: local/supabase, vision_provider: mock/openai/anthropic}` |
+| GET | `/api/health` | `{ok, db: sqlite/postgres, storage: local/supabase, vision_provider: mock/openai/anthropic, vision_check, db_url_check, data_files}`. `vision_check` = `{VISION_PROVIDER, anthropic_key_set, anthropic_key_prefix_ok, openai_key_set}` — 키 값은 내보내지 않고 있는지·형식만 (10/26 Vercel 키 붙여넣기 오류 진단용) |
 | GET | `/api/meta` | 위 고정값 + `facility_types`(시설 종류 코드→이름), `departments`(재배정용 부서 목록) |
 
 ## 지도

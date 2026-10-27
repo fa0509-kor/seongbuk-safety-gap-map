@@ -23,6 +23,7 @@ GAP_POINTS = {
 }
 SCHOOL_ZONE_RADIUS_M = 300      # 보호구역 지정 기준(시설 주출입문 반경 300m). 경계가 없는 보호구역에만 쓴다 (경계가 있으면 경계 안인지로 판단)
 SCHOOL_ZONE_POINTS = 30
+ZONE_BUFFER_M = 30              # 경계 밖이어도 이 거리 안이면 해당. 폰 GPS 오차(약 20m) + 보호구역 도로 옆 옹벽·담장(약 10m). decisions.md 10/26
 OUTSIDE_LIST_POINTS = 20        # 관리목록(해빙기 점검 326개소) 밖. 목록을 받기 전까지 계산하지 않음
 OUTSIDE_LIST_READY = False
 CONFIRM_POINTS_EACH = 5
@@ -96,8 +97,31 @@ def in_polygon(lat: float, lon: float, rings: list[list[list[float]]]) -> bool:
     return _in_ring(lat, lon, rings[0]) and not any(_in_ring(lat, lon, h) for h in rings[1:])
 
 
+def _ring_distance_m(lat: float, lon: float, ring: list[list[float]]) -> float:
+    """점에서 고리(선분 묶음)까지 가장 가까운 거리(m). 짧은 거리라 위도 기준 평면 근사로 계산."""
+    kx, ky = 111_320 * math.cos(math.radians(lat)), 110_540
+    best = math.inf
+    for (x1, y1), (x2, y2) in zip(ring, ring[1:]):
+        ax, ay = (x1 - lon) * kx, (y1 - lat) * ky
+        bx, by = (x2 - lon) * kx, (y2 - lat) * ky
+        dx, dy = bx - ax, by - ay
+        t = 0.0 if dx == dy == 0 else max(0.0, min(1.0, -(ax * dx + ay * dy) / (dx * dx + dy * dy)))
+        best = min(best, math.hypot(ax + t * dx, ay + t * dy))
+    return best
+
+
+def _near_bbox(lat: float, lon: float, rings: list[list[list[float]]], margin_m: float) -> bool:
+    """버퍼를 더한 바깥 고리 사각형 안에 있는지 (거리 계산 전에 빠르게 거르기)."""
+    xs = [p[0] for p in rings[0]]
+    ys = [p[1] for p in rings[0]]
+    mx, my = margin_m / (111_320 * math.cos(math.radians(lat))), margin_m / 110_540
+    return min(xs) - mx <= lon <= max(xs) + mx and min(ys) - my <= lat <= max(ys) + my
+
+
 def zone_hit(lat: float | None, lon: float | None) -> dict | None:
-    """어린이보호구역에 해당하는지. 경계가 있는 곳은 경계 안이면, 경계가 없는 곳은 시설 반경 300m 안이면 해당.
+    """어린이보호구역에 해당하는지.
+    - 경계가 있는 곳: 경계 안이면 'boundary', 경계 밖 ZONE_BUFFER_M(30m) 안이면 'near'
+    - 경계가 없는 곳: 시설 반경 300m 안이면 'radius'
     경계 파일이 없으면 예전 방식(시설 위치 반경 300m)으로 판단. 해당 없으면 None."""
     if lat is None or lon is None:
         return None
@@ -108,6 +132,16 @@ def zone_hit(lat: float | None, lon: float | None) -> dict | None:
     for z in zs:
         if any(in_polygon(lat, lon, rings) for rings in z["polys"]):
             return {"name": z["name"], "how": "boundary", "dist": None}
+    near = None
+    for z in zs:
+        for rings in z["polys"]:
+            if not _near_bbox(lat, lon, rings, ZONE_BUFFER_M):
+                continue
+            d = min(_ring_distance_m(lat, lon, r) for r in rings)
+            if d <= ZONE_BUFFER_M and (near is None or d < near["dist"]):
+                near = {"name": z["name"], "how": "near", "dist": d}
+    if near:
+        return near
     for z in zs:
         if not z["polys"] and z["point"]:
             d = distance_m(lat, lon, *z["point"])
@@ -140,8 +174,12 @@ def score(r) -> dict:
     if r.source != "gap":
         hit = zone_hit(r.lat, r.lon)
         if hit:
-            note = (f"{hit['name']} 보호구역 경계 안" if hit["how"] == "boundary"
-                    else f"{hit['name']} {hit['dist']:.0f}m (경계 정보 없음, 반경 {SCHOOL_ZONE_RADIUS_M}m)")
+            if hit["how"] == "boundary":
+                note = f"{hit['name']} 보호구역 경계 안"
+            elif hit["how"] == "near":
+                note = f"{hit['name']} 보호구역 경계에서 {hit['dist']:.0f}m (GPS 오차·도로 옆 시설 감안 {ZONE_BUFFER_M}m 이내)"
+            else:
+                note = f"{hit['name']} {hit['dist']:.0f}m (경계 정보 없음, 반경 {SCHOOL_ZONE_RADIUS_M}m)"
             items.append({"label": "어린이보호구역 인접", "points": SCHOOL_ZONE_POINTS, "note": note})
         elif r.lat is None:
             items.append({"label": "어린이보호구역 인접", "points": 0, "note": "위치 없음"})

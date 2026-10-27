@@ -11,7 +11,7 @@
 | --- | --- | --- | --- |
 | 백엔드 실행, 키 없이 로컬 동작 (SQLite·로컬 사진·Mock AI) | ✅ | `backend/app/` | `uvicorn backend.app.main:app --reload` → `/api/health` |
 | 사진 업로드 → 줄이기·EXIF 제거 → AI 분류 | ✅ | `routers/photos.py`, `storage.py`, `vision.py` | `/docs`에서 `POST /api/photos` |
-| AI 분류 공급자 전환 (OpenAI / Anthropic / Mock, 실패 시 Mock) | 🟡 | `vision.py`, 프롬프트 `prompts/vision_v1.txt` | 실제 키로는 아직 미확인 |
+| AI 분류: Claude API (실패 시 Mock으로 대체, OpenAI도 전환 가능) | ✅ | `vision.py`, 프롬프트 `prompts/vision_v1.txt` | 10/26 로컬에서 실제 분류 확인. `/api/health`의 `vision_provider: anthropic` |
 | 주민 제보 저장, 내 제보 조회, 빨간 점 | ✅ | `routers/reports.py`, `frontend/src/lib/myReports.js` | 아래 시연 흐름 |
 | 관리자 목록·상세·상태 변경·메모·조치 후 사진·오탐·출동 | ✅ | `routers/admin.py` | 아래 시연 흐름 |
 | CCTV 프레임 업로드 (주민 사진과 같은 분류) | ✅ | `AdminList.jsx` | 관리자 목록 오른쪽 위 버튼 |
@@ -24,11 +24,11 @@
 | 데이터 사전 점검 (안전시설 5,807곳 중 먼저 확인할 97곳, 확인 완료 수) — 벤치마크 연결 | ✅ | `backend/app/screening.py`, `AdminDashboard.jsx`, `docs/benchmark.md` | `/admin` 맨 위 |
 | 부서 자동 배정 (제보 때 시설 종류 선택 → 부서), 관리자 재배정·이력 | ✅ | `backend/app/departments.py`, 부서 표 `docs/departments.md` | 제보 3단계 시설 종류 → 관리자 상세 '담당 부서' |
 | 기간별 점검 확인서 (고정 양식 7문장 + DB 집계, 인쇄·PDF) | ✅ | `routers/report.py`, `pages/admin/AdminReport.jsx` | `/admin/report` |
-| 어린이보호구역 실제 경계: 점수 '경계 안이면 +30'(경계 없는 22곳은 반경 300m), 주민 지도에 경계선 | ✅ | `backend/app/scoring.py`(`zone_hit`), `backend/scripts/build_zones.py`, `GET /api/zones`, `MapPage.jsx` | `/map` 에서 얇은 경계선 확인, `python -m pytest backend/tests -q` |
+| 어린이보호구역 실제 경계: 점수 '경계 안 또는 경계에서 30m 이내면 +30'(경계 없는 22곳은 반경 300m), 주민 지도에 빨간 경계 | ✅ | `backend/app/scoring.py`(`zone_hit`), `backend/scripts/build_zones.py`, `GET /api/zones`, `MapPage.jsx` | `/map` 에서 얇은 경계선 확인, `python -m pytest backend/tests -q` |
 | 나도 봤어요(+1) → 우선순위 점수 반영 | ✅ | `POST /api/reports/{id}/confirm`, `MapPage.jsx` | 주민 지도에서 남의 제보 누르기 |
 | 제보 위치 핀 조정 (끌기·지도 누르기) | ✅ | `components/PinPicker.jsx` | `/report` 2단계. 위치 자동은 https에서만 |
 | 대시보드·확인서 '기한 내 조치율' (기한 지난 건 중 기한 안 완료 비율) | ✅ | `scoring.on_time()` | `/admin` 다섯 번째 칸 |
-| 백엔드 테스트 26개 (시연 흐름·점수·적재·집계·부서·보고서·+1·사전 점검·보호구역 경계·조치율) | ✅ | `backend/tests/` | `python -m pytest backend/tests -q` |
+| 백엔드 테스트 28개 (시연 흐름·점수·적재·집계·부서·보고서·+1·사전 점검·보호구역 경계·30m·조치율·AI 응답 처리) | ✅ | `backend/tests/` | `python -m pytest backend/tests -q` |
 
 **시연 흐름 (60초)** — 2026-10-20 배포 주소(seongbuk-safety.vercel.app)에서 폰 LTE로 끝까지 확인
 1. 폰 `/report` → 사진 → AI 결과 → 제보 보내기 → `/my`로 이동
@@ -41,10 +41,9 @@
 | --- | --- | --- | --- |
 | 1 | 디자인 시안(Figma)대로 화면 다시 그리기 | 디자인 → 개발 | 디자인이 Figma로 화면 → 개발이 반영 → 캡처를 PPT에 (decisions.md 10/20). `pages/*.jsx`의 데이터 함수(api.js 호출)는 그대로 두고 JSX·스타일만 교체. 색은 `src/index.css`의 `@theme` |
 | 2 | 체험용 사진 넣기 | 개발 | `frontend/public/demo/sample.jpg`. **직접 찍은 사진만** (AI-Hub 사진은 약관상 공개 레포에 넣으면 안 됨) |
-| 3 | 실제 AI 키로 분류 확인 | 개발 | `.env`에 `OPENAI_API_KEY` → `/api/health`의 `vision_provider`가 openai인지 |
+| 3 | 실제 AI 분류 배포 | PM | ✅ 로컬 확인(10/26). Vercel에 `ANTHROPIC_API_KEY`, `VISION_PROVIDER=anthropic` (Production·Preview) → 폰에서 사진 2~3장 확인 |
 | 4 | 학습 모델 연결 | 개발 | `vision.py`의 `PROVIDERS`에 `model` 추가. ONNX로 내보내면 Vercel 함수 용량(파이썬 500MB) 안에 들어감 |
-| 5 | AI 학습 데이터 만들기 (조각 자르기·분할) | 개발 | ✅ 10/25 조각 10,262개 (`poc/make_crack_patches.py`, 통계 `data/ai_patch_stats.md`). 조각은 `data/raw/aihub/patches_v1/`(올리지 않음) |
-| 5-1 | 분류 모델 1차 학습 (MobileNetV3-Small, 이 PC CPU) | 개발 | ✅ 10/25 시험 정확도 60.4%, 클래스별 재현율 평균 54.6%. 백태·누수 재현율 9.7%로 낮음 → 개선 검토. 결과 `data/ai_eval.md`, 코드 `poc/train_crack_classifier.py`. ONNX(6.1MB)는 `data/raw/aihub/model_v1/`에만 있고 올리지 않음 (앱 연결·저장소 포함 여부는 팀 결정, 출처 표기 필요) |
+| 5 | AI 학습 데이터 만들기 (조각 자르기·분할) | 개발 | ✅ 10/25 조각·분할 완료 (`poc/make_crack_patches.py`, 통계 `data/ai_patch_stats.md`). 조각 10,262개는 `data/raw/aihub/patches_v1/`(올리지 않음). 10/26 1차 학습 3회 완료 → 3차(MobileNetV3-Large) 채택, 시험 정확도 56.2%·평균 재현율 58.9%, 백태·누수 11.7% (`data/ai_train_results.md`, 1차 상세·혼동행렬 `data/ai_eval.md`, 학습 코드 `poc/train_crack_classifier.py`, ONNX는 `data/raw/aihub/model_v1/`에만). 남은 일: 백태·누수 개선 후 재학습 → ONNX. 학습은 본인 PC에서 (국외 반출 금지) |
 | 6 | 지역급경사지 데이터 연결 → '관리목록 밖' 가산점 켜기 | 개발 | API 키 받으면 가져오기 스크립트. 벤치마크 ② 근거 (`docs/benchmark.md`) |
 | 7 | 시연 전 테스트 제보 정리, 시연용 제보 3~5건 | PM | 10/20 테스트 제보 1건이 운영 DB에 있음. 팀원이 성북구에서 직접 찍어 앱으로 제보 |
 
