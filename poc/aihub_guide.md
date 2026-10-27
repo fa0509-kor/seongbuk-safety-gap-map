@@ -91,3 +91,24 @@ AI-Hub: https://aihub.or.kr (활용 신청·승인 후 다운로드. 데이터�
 - 옹벽 라벨 분포(주석 개수): crack 1,718 / leak 1,621 / spalling 834 / efflorescence 770 / material separation 514 / reticular crack 417 / detachment 346 / exhilaration 39 / damage 21 / **rebar 7**
   - 옹벽만으로는 철근 노출(rebar)을 학습할 수 없음 (7개). 와이어프레임의 4분류 중 철근 노출은 다른 시설물 데이터가 필요
 - 옹벽 학습용(TS 9.16GB, TL 14.62MB)은 아직 안 받음. 디스크 여유 27GB
+
+## 라벨 한글 뜻 (데이터 설명서 확인, 2026-10-25)
+
+AI-Hub 상세 페이지에서 받은 `(양식)데이터설명서.hwp`의 라벨 목록(영문)과 키워드(한글)를 대조했다. 두 목록의 순서가 같아서 아래처럼 대응시켰다. 설명서에는 각 라벨의 정의 문장이 없고, 대응은 순서에 근거한 것이다.
+
+| 영문 라벨 | 한글 | 우리 5종 분류 |
+| --- | --- | --- |
+| crack | 균열 | 균열 |
+| reticular crack | 망상균열 | 균열 |
+| detachment | 박리 | 박리 |
+| spalling | 박락 | 박리 |
+| efflorescence | 백태 | 백태·누수 |
+| leak | 누수 | 백태·누수 |
+| rebar | 철근노출 | 철근 노출 |
+| material separation | 재료분리 | 쓰지 않음 |
+| exhilaration | 들뜸 | 쓰지 않음 (번역 오류로 보이며 '들뜸'을 뜻함) |
+| damage | 파손 | 쓰지 않음 |
+
+- 설명서의 라벨 형식: 이미지마다 `annotations[]`에 `label`, `labelNum`, `points`(좌표), `width`(균열 폭, 필요할 때만), `shape`(Polygon 또는 Polyline). 균열이 있는 이미지는 `object_included`가 Y
+- 일부 이미지에는 균열이 없어 `object_included`가 N이고, 정상 조각을 자를 때 이 이미지를 쓸 수 있다 (샘플과 옹벽 검증 묶음에는 N이 없었음)
+- 들뜸(exhilaration)은 박리와 비슷한 손상으로 보이지만 정의가 확인되지 않아 5종에 넣지 않았다 (옹벽에서 39개)
