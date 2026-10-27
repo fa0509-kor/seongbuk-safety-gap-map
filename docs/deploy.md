@@ -38,7 +38,7 @@ SUPABASE_BUCKET=reports
 3. Vercel 웹 → 프로젝트 → Settings
    - **Build and Deployment → Framework Preset: Services** (자동으로 안 잡혔으면)
    - **Environment Variables**: 아래 값을 Production·Preview 모두에
-     `DATABASE_URL`, `STORAGE=supabase`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_BUCKET=reports`, (있으면) `OPENAI_API_KEY`
+     `DATABASE_URL`, `STORAGE=supabase`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_BUCKET=reports`, `ANTHROPIC_API_KEY`, `VISION_PROVIDER=anthropic` (없으면 Mock)
    - **Functions → Function Region: Seoul (icn1)** (Supabase와 같은 지역)
 4. 미리보기 배포 → 확인 → 정식 배포
    ```bash

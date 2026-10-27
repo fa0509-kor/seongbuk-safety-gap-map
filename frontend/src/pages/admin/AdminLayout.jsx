@@ -13,11 +13,11 @@ export default function AdminLayout() {
         <NavLink to="/admin" end className={link}>대시보드</NavLink>
         <NavLink to="/admin/reports" className={link}>제보·공백 목록</NavLink>
         <NavLink to="/admin/integrated" className={link}>통합 점검 후보</NavLink>
-        <NavLink to="/admin/report" className={link}>보고서</NavLink>
-        <div className="flex-1" />
-        <div className="px-3 text-xs text-gray-400">성북구 안전 담당</div>
-      </nav>
-      <main className="min-w-0 flex-1 p-6 md:px-8 md:py-7 print:p-0"><Outlet /></main>
+          <NavLink to="/admin/report" className={link}>점검 확인서</NavLink>
+          <div className="flex-1" />
+          <div className="px-3 text-xs text-gray-400">성북구 안전 담당</div>
+        </nav>
+        <main className="min-w-0 flex-1 p-6 md:px-8 md:py-7 print:p-0"><Outlet /></main>
     </div>
   )
 }
