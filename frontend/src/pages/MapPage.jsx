@@ -74,21 +74,22 @@ export default function MapPage() {
   return (
     <div className="relative h-full">
       <div ref={el} className="absolute inset-0" />
-      <div className="absolute inset-x-2 top-2 z-[1000] flex gap-1">
+      <div className="absolute inset-x-0 top-0 z-[1000] flex flex-wrap gap-1.5 px-4 pt-4">
         {FILTERS.map(([k, label]) => (
           <button key={k} type="button" onClick={() => setFilter(k)}
-            className={`rounded-full px-3 py-1 text-sm shadow ${filter === k ? 'bg-brand text-white' : 'bg-white'}`}>{label}</button>
+            className={`h-[34px] rounded-full px-3 text-[13px] ${filter === k ? 'bg-ink text-white' : 'border border-line bg-white text-ink'}`}>{label}</button>
         ))}
       </div>
-      <div className="absolute bottom-20 left-2 z-[1000] rounded bg-white/90 p-2 text-xs shadow">
+      <div className="absolute bottom-3 right-3 z-[1000] flex flex-col gap-1 rounded-[10px] border border-line bg-white px-2.5 py-2 text-[11px]">
         {LEGEND.map(([k, label]) => (
           <div key={k} className="flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ background: COLORS[k] }} />{label}</div>
         ))}
         <div className="flex items-center gap-1"><span className="h-2 w-3 border border-red-600 bg-red-300" />어린이보호구역</div>
       </div>
       {p && (
-        <div className="absolute inset-x-0 bottom-16 z-[1000] rounded-t-xl bg-white p-4 shadow-lg">
-          <button type="button" onClick={() => setSelected(null)} className="float-right text-gray-400">닫기</button>
+        <div className="absolute inset-x-0 bottom-0 z-[1000] flex flex-col gap-2.5 rounded-t-[20px] border-t border-line bg-white px-5 pb-4 pt-2.5 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]">
+          <div className="mx-auto h-1 w-10 rounded bg-line" />
+          <button type="button" onClick={() => setSelected(null)} className="float-right text-sm text-sub">닫기</button>
           {selected._kind === 'gap'
             ? <><div className="text-xs text-gray-500">규칙</div><div className="font-semibold">{p.rule}</div><div className="text-sm">{p.reason}</div><div className="text-xs text-gray-500">{p.address}</div></>
             : <>
@@ -98,7 +99,7 @@ export default function MapPage() {
                 {p.status !== 'done' && (
                   <button type="button" disabled={myReports.confirmed(p.public_id) || myReports.ids().includes(p.public_id)}
                     onClick={() => confirmSeen(p.public_id)}
-                    className="mt-2 w-full rounded-lg border py-2 text-sm disabled:opacity-40">
+                    className="mt-2 h-[46px] w-full rounded-xl bg-brand text-[15px] font-semibold text-white disabled:opacity-40">
                     {myReports.confirmed(p.public_id) ? '확인했어요' : '나도 봤어요 (+1)'}
                   </button>
                 )}
