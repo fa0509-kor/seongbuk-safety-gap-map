@@ -28,7 +28,8 @@
 | 나도 봤어요(+1) → 우선순위 점수 반영 | ✅ | `POST /api/reports/{id}/confirm`, `MapPage.jsx` | 주민 지도에서 남의 제보 누르기 |
 | 제보 위치 핀 조정 (끌기·지도 누르기) | ✅ | `components/PinPicker.jsx` | `/report` 2단계. 위치 자동은 https에서만 |
 | 대시보드·확인서 '기한 내 조치율' (기한 지난 건 중 기한 안 완료 비율) | ✅ | `scoring.on_time()` | `/admin` 다섯 번째 칸 |
-| 백엔드 테스트 28개 (시연 흐름·점수·적재·집계·부서·보고서·+1·사전 점검·보호구역 경계·30m·조치율·AI 응답 처리) | ✅ | `backend/tests/` | `python -m pytest backend/tests -q` |
+| AI 신뢰도 50 미만 → '담당자 확인 필요' 표시 (점수는 그대로) | ✅ | `scoring.py` (`needs_review`), `AdminList.jsx`, `PriorityCard.jsx` | 관리자 목록 유형 옆 '확인 필요' |
+| 백엔드 테스트 29개 (시연 흐름·점수·적재·집계·부서·보고서·+1·사전 점검·보호구역 경계·30m·조치율·AI 응답 처리·확인 필요) | ✅ | `backend/tests/` | `python -m pytest backend/tests -q` |
 
 **시연 흐름 (60초)** — 2026-10-20 배포 주소(seongbuk-safety.vercel.app)에서 폰 LTE로 끝까지 확인
 1. 폰 `/report` → 사진 → AI 결과 → 제보 보내기 → `/my`로 이동

@@ -74,7 +74,10 @@ export default function AdminList() {
                   <span className={`rounded px-1.5 py-0.5 text-xs ${sourceBadge(r)}`}>{r.source_label}</span>
                   {r.is_demo && <span className="ml-1 rounded bg-orange-100 px-1.5 py-0.5 text-xs text-orange-800">체험</span>}
                 </td>
-                <td className="whitespace-nowrap px-3.5">{r.gap_rule ? r.gap_rule : (r.ai?.category ?? '-')}</td>
+                <td className="whitespace-nowrap px-3.5">
+                  {r.gap_rule ? r.gap_rule : (r.ai?.category ?? '-')}
+                  {r.priority.needs_review && <span className="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800">확인 필요</span>}
+                </td>
                 <td className="whitespace-nowrap px-3.5 text-sub">{r.gap_rule ? '규칙' : (r.ai?.confidence != null ? `${r.ai.confidence}%` : '-')}</td>
                 <td className="whitespace-nowrap px-3.5 text-xs">{r.dept ?? '-'}</td>
                 <td className="whitespace-nowrap px-3.5"><span className={`rounded-full px-2 py-0.5 text-xs ${statusChip(r)}`}>{r.priority.overdue ? '기한 초과' : r.status_label}</span></td>

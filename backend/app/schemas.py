@@ -89,6 +89,7 @@ class Priority(BaseModel):
     urgent: bool = Field(description="URGENT_THRESHOLD 이상이면 기한이 짧아짐")
     due_at: datetime | None = Field(None, description="조치 기한. 공백 후보(source=gap)는 없음")
     overdue: bool | None = Field(None, description="기한이 지났는데 완료가 아님")
+    needs_review: bool = Field(False, description="AI 신뢰도가 기준(50) 미만 → '담당자 확인 필요' 표시. 점수에는 영향 없음")
 
 
 class AdminReportOut(ReportOut):
