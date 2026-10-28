@@ -149,3 +149,21 @@ def test_zone_buffer_30m(monkeypatch):
     item = admin_item(make(37.6005, 127.0012)["public_id"])
     assert item["priority"]["total"] == base + scoring.SCHOOL_ZONE_POINTS
     assert any("경계에서" in (i["note"] or "") and "30m 이내" in (i["note"] or "") for i in item["priority"]["items"])
+
+
+def test_low_confidence_needs_review_without_penalty():
+    from backend.app.db import SessionLocal
+    from backend.app.models import Report
+
+    item = admin_item(make(37.5, 127.6)["public_id"])  # 보호구역에서 먼 곳
+    base = item["priority"]["total"]
+    assert item["priority"]["needs_review"] is False  # Mock 신뢰도 80
+    with SessionLocal() as db:
+        r = db.get(Report, item["id"])
+        r.ai_confidence = 35
+        db.commit()
+    low = client.get(f"/api/admin/reports/{item['id']}").json()["priority"]
+    assert low["needs_review"] is True and low["total"] == base  # 점수는 그대로
+    assert any(i["label"].startswith("AI 불확실") and i["points"] == 0 for i in low["items"])
+    client.patch(f"/api/admin/reports/{item['id']}", json={"false_positive": True})
+    assert client.get(f"/api/admin/reports/{item['id']}").json()["priority"]["needs_review"] is False

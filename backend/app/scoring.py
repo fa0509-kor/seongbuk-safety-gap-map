@@ -27,6 +27,7 @@ ZONE_BUFFER_M = 30              # 경계 밖이어도 이 거리 안이면 해�
 OUTSIDE_LIST_POINTS = 20        # 관리목록(해빙기 점검 326개소) 밖. 목록을 받기 전까지 계산하지 않음
 OUTSIDE_LIST_READY = False
 CONFIRM_POINTS_EACH = 5
+REVIEW_CONFIDENCE_BELOW = 50     # AI 신뢰도가 이 값 미만이면 '담당자 확인 필요' 표시. 점수는 깎지 않음 (헷갈리는 사진을 묻지 않기 위해, decisions.md 10/28)
 CONFIRM_POINTS_MAX = 20
 
 # --- 조치 기한 ---
@@ -184,6 +185,13 @@ def score(r) -> dict:
         elif r.lat is None:
             items.append({"label": "어린이보호구역 인접", "points": 0, "note": "위치 없음"})
 
+    # AI가 헷갈린 사진: 점수는 그대로 두고 사람이 먼저 보도록 표시만 한다 (재현율 우선 원칙)
+    needs_review = (r.source != "gap" and r.ai_confidence is not None
+                    and r.ai_confidence < REVIEW_CONFIDENCE_BELOW and not r.false_positive)
+    if needs_review:
+        items.append({"label": "AI 불확실 · 담당자 확인 필요", "points": 0,
+                      "note": f"AI 신뢰도 {r.ai_confidence} (기준 {REVIEW_CONFIDENCE_BELOW} 미만). 점수는 깎지 않음"})
+
     if r.confirm_count:
         pts = min(r.confirm_count * CONFIRM_POINTS_EACH, CONFIRM_POINTS_MAX)
         items.append({"label": "같은 곳 확인", "points": pts, "note": f"{r.confirm_count}명"})
@@ -198,7 +206,8 @@ def score(r) -> dict:
     if r.source != "gap":  # 공백 후보는 신고가 아니라 점검 후보라 기한을 두지 않음 (decisions.md)
         due_at = _aware(r.created_at) + timedelta(days=DUE_DAYS_URGENT if urgent else DUE_DAYS_NORMAL)
         overdue = r.status != "done" and not r.false_positive and datetime.now(timezone.utc) > due_at
-    return {"total": total, "items": items, "urgent": urgent, "due_at": due_at, "overdue": overdue}
+    return {"total": total, "items": items, "urgent": urgent, "due_at": due_at, "overdue": overdue,
+            "needs_review": needs_review}
 
 
 def done_at(r) -> datetime | None:

@@ -97,11 +97,12 @@
 - 관리자 응답(`AdminReportOut`) = 주민 응답 + `id, updated_at, source, source_label, dispatch, false_positive, is_demo, gap_rule, gap_reason, priority`.
 - `priority` = 규칙 점수 (`backend/app/scoring.py`, 값은 docs/decisions.md):
 ```json
-{"total": 50, "urgent": false, "due_at": "2026-10-26T14:20:56Z", "overdue": false,
+{"total": 50, "urgent": false, "due_at": "2026-10-26T14:20:56Z", "overdue": false, "needs_review": false,
  "items": [{"label": "유형 기본: 콘크리트 균열", "points": 20, "note": "AI가 고른 유형"},
            {"label": "관리목록 밖", "points": 0, "note": "데이터 대기 (해빙기 점검 326개소 목록)"},
            {"label": "어린이보호구역 인접", "points": 30, "note": "성북어린이집 137m (반경 300m)"}]}
 ```
+- `needs_review`: AI 신뢰도가 50 미만이면 true → 화면에 "AI 불확실 · 담당자 확인 필요" 표시. 점수에는 영향 없음 (items에 0점 항목 한 줄 추가)
 - 공백 탐지 항목(`source=gap`, 97건: 사용불가 45 + 좌표 이상 19 + 거리 기준 33)은 서버가 켜질 때 `backend/data/gap_items.json`에서 한 번 적재된다. 사진·AI 결과가 없고 `gap_rule`, `gap_reason`이 있다. 기한(`due_at`) 없음
 - PATCH에서 상태가 바뀌거나 `note`/`after_photo_key`가 있으면 처리 이력(`history`)에 한 줄 추가.
 

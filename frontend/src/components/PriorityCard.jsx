@@ -7,6 +7,7 @@ export default function PriorityCard({ priority }) {
       <div className="flex items-baseline gap-2">
         <span className="text-3xl font-bold">{total}</span><span className="text-sm text-gray-500">점</span>
         {urgent && <span className="rounded bg-danger px-2 text-xs text-white">우선</span>}
+        {priority.needs_review && <span className="rounded bg-amber-100 px-2 text-xs text-amber-800">AI 불확실 · 확인 필요</span>}
       </div>
       <ul className="divide-y rounded border text-sm">
         {items.map((i) => (
