@@ -132,3 +132,18 @@ def test_report_with_extra_photos_memo_and_taken_at():
     xlsx = client.get("/api/admin/ledger.xlsx").content
     sheet = ZipFile(BytesIO(xlsx)).read("xl/worksheets/sheet1.xml").decode("utf-8")
     assert "촬영 일시" in sheet and "사진 수" in sheet and "2026-11-06 14:03" in sheet
+
+
+def test_parse_boxes_validates_and_locate_is_mock_without_key():
+    from backend.app import vision
+    ok = vision.parse_boxes('{"boxes": [{"x": 0.2, "y": 0.3, "w": 0.9, "h": 0.2, "label": "균열"}, {"x": 5, "y": 0, "w": 0.2, "h": 0.2}, {"x": 0.1, "y": 0.1, "w": 0.01, "h": 0.2}]}')
+    assert ok == [{"x": 0.2, "y": 0.3, "w": 0.8, "h": 0.2, "label": "균열"}]  # 사진 밖 부분은 자르고, 범위 밖·너무 작은 것은 버림
+    assert vision.parse_boxes("설명만 있음") == [] and vision.parse_boxes('{"boxes": "없음"}') == []
+    from fastapi.testclient import TestClient
+    from backend.app.main import app
+    from .test_priority import upload
+    c = TestClient(app)
+    key = upload()["key"]
+    r = c.post(f"/api/photos/{key}/locate")
+    assert r.status_code == 200 and r.json() == {"boxes": [], "mock": True}  # 테스트는 키 없는 mock
+    assert c.post("/api/photos/없는키.jpg/locate").status_code == 404

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import AIResultCard from '../../components/AIResultCard.jsx'
+import BoxedPhoto from '../../components/BoxedPhoto.jsx'
 import AftercarePanel from '../../components/AftercarePanel.jsx'
 import PriorityCard from '../../components/PriorityCard.jsx'
 import { api } from '../../lib/api.js'
@@ -36,7 +37,7 @@ export default function AdminDetail() {
       <div className="detail-grid grid grid-cols-3 gap-4">
         <div className="rounded-lg bg-white p-4">
           <h2 className="mb-2 font-semibold">AI가 본 것</h2>
-          {r.photo_url && <img src={r.photo_url} alt="제보 사진" className="mb-2 rounded" />}
+          {r.photo_url && (r.ai?.boxes?.length ? <div className="mb-2"><BoxedPhoto src={r.photo_url} boxes={r.ai.boxes} alt="제보 사진 (AI 추정 문제 위치)" /><p className="text-xs text-gray-400">빨간 박스는 주민이 요청해 AI가 추정한 위치입니다(정확도 미검증)</p></div> : <img src={r.photo_url} alt="제보 사진" className="mb-2 rounded" />)}
           {(r.photos ?? []).length > 0 && (
             <ul className="mb-2 flex flex-col gap-2 text-sm">
               {r.photos.map((p) => (

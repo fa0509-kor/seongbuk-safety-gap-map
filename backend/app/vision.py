@@ -94,6 +94,47 @@ def _mock(_jpeg: bytes) -> str:
                        "reason": "[MOCK] 키가 없어 고정 응답을 돌려줌"}, ensure_ascii=False)
 
 
+LOCATE_VERSION = "locate_v1"
+LOCATE_PROMPT = (Path(__file__).parent / "prompts" / f"{LOCATE_VERSION}.txt").read_text(encoding="utf-8")
+
+
+def parse_boxes(text: str) -> list[dict]:
+    """위치 응답에서 사각형만 꺼내 검증한다. 비율이 0~1 밖이거나 너무 작으면 버리고, 사진 밖으로 나간 부분은 자른다. 최대 2개."""
+    start = text.find("{")
+    if start < 0:
+        return []
+    try:
+        data, _ = json.JSONDecoder().raw_decode(text[start:])
+    except json.JSONDecodeError:
+        return []
+    out: list[dict] = []
+    for b in (data.get("boxes") or [])[:2]:
+        try:
+            x, y, w, h = (float(b[k]) for k in ("x", "y", "w", "h"))
+        except (KeyError, TypeError, ValueError):
+            continue
+        if not (0 <= x < 1 and 0 <= y < 1) or w < 0.03 or h < 0.03 or w > 1 or h > 1:
+            continue
+        out.append({"x": round(x, 3), "y": round(y, 3), "w": round(min(w, 1 - x), 3), "h": round(min(h, 1 - y), 3),
+                    "label": str(b.get("label", ""))[:20]})
+    return out
+
+
+def locate(jpeg: bytes) -> tuple[list[dict], bool]:
+    """(사각형 목록, 임시 결과 여부). Claude 공급자일 때만 실제로 호출한다. 그 밖(키 없음, OpenAI)은 빈 목록과 mock=True."""
+    if config.vision_provider() != "anthropic":
+        return [], True
+    import anthropic
+    resp = anthropic.Anthropic().messages.create(
+        model=config.ANTHROPIC_VISION_MODEL, max_tokens=512,
+        messages=[{"role": "user", "content": [
+            {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": base64.b64encode(jpeg).decode()}},
+            {"type": "text", "text": LOCATE_PROMPT}]}],
+    )
+    text = "".join(getattr(b, "text", "") for b in resp.content if getattr(b, "type", "") == "text")
+    return parse_boxes(text), False
+
+
 PROVIDERS = {"openai": _openai, "anthropic": _anthropic, "mock": _mock}
 
 

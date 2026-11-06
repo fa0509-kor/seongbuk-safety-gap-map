@@ -52,6 +52,18 @@ def url(key: str) -> str:
     return f"/api/photos/{key}"
 
 
+def read(key: str) -> bytes:
+    """저장된 사진 원본(JPEG) 바이트. 문제 위치 표시처럼 서버가 사진을 다시 AI에 보낼 때 쓴다."""
+    if config.STORAGE == "supabase":
+        r = httpx.get(_supabase_signed_url(key), timeout=30)
+        r.raise_for_status()
+        return r.content
+    p = local_path(key)
+    if not p.exists():
+        raise PhotoError("사진 없음")
+    return p.read_bytes()
+
+
 def local_path(key: str):
     p = (config.UPLOAD_DIR / key).resolve()
     if config.UPLOAD_DIR.resolve() not in p.parents:  # ../ 같은 경로 차단

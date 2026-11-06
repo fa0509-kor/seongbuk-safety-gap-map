@@ -12,6 +12,15 @@ class Alternative(BaseModel):
     confidence: int
 
 
+class Box(BaseModel):
+    """문제 위치 사각형. 사진 전체를 가로·세로 1로 본 비율(왼쪽 위 모서리 x, y와 폭 w, 높이 h). AI 추정이며 정확도는 검증하지 않았다."""
+    x: float
+    y: float
+    w: float
+    h: float
+    label: str = ""
+
+
 class AIResult(BaseModel):
     category: str
     confidence: int = Field(description="모델이 스스로 적은 값(0~100). 정확도가 아님")
@@ -21,6 +30,7 @@ class AIResult(BaseModel):
     prompt_version: str | None = None
     fixed: list[str] | None = Field(None, description="허용값 밖이라 보정한 내용")
     error: str | None = Field(None, description="실제 AI 호출이 실패해 임시 결과를 쓴 경우")
+    boxes: list[Box] | None = Field(None, description="'문제 위치 표시'를 눌렀을 때만 있는 AI 추정 사각형 (정확도 미검증)")
 
 
 class PhotoOut(BaseModel):

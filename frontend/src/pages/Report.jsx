@@ -2,6 +2,7 @@ import Brand from '../components/Brand.jsx'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import AIResultCard from '../components/AIResultCard.jsx'
+import BoxedPhoto from '../components/BoxedPhoto.jsx'
 import NearbyReports from '../components/NearbyReports.jsx'
 import PhotoStrip from '../components/PhotoStrip.jsx'
 import PinPicker from '../components/PinPicker.jsx'
@@ -41,6 +42,8 @@ export default function Report() {
   const [active, setActive] = useState(null)       // 메모를 적고 있는 사진 번호
   const [adding, setAdding] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [boxes, setBoxes] = useState(null)       // 문제 위치 표시 결과 (null=아직 안 누름)
+  const [locating, setLocating] = useState(false)
   const [error, setError] = useState('')
 
   const [draftBack, setDraftBack] = useState(false) // 임시저장을 불러온 상태
@@ -66,7 +69,7 @@ export default function Report() {
   }, [])
 
   async function handleFile(file) {
-    setError(''); setBusy(true); setPhoto(null); setLastFile(file)
+    setError(''); setBusy(true); setPhoto(null); setLastFile(file); setBoxes(null)
     try {
       setMainTaken(await takenAt(file))
       const blob = await resizeImage(file)
@@ -97,6 +100,11 @@ export default function Report() {
   const stripItems = photo ? [{ key: 'main', preview, memo: photoMemo, takenAt: mainTaken }, ...extras] : []
   const setItemMemo = (i, v) => (i === 0 ? setPhotoMemo(v) : setExtras((l) => l.map((x, k) => (k === i - 1 ? { ...x, memo: v } : x))))
   const removeItem = (i) => { setExtras((l) => l.filter((_, k) => k !== i - 1)); setActive(null) }
+
+  async function showBoxes() {
+    setLocating(true); setError('')
+    try { const r = await api.locate(photo.key); setBoxes(r.mock ? [] : r.boxes) } catch (e) { setError(`문제 위치 표시 실패: ${e.message}`) } finally { setLocating(false) }
+  }
 
   async function useDemoPhoto() {
     const res = await fetch('/demo/sample.jpg')
@@ -181,6 +189,15 @@ export default function Report() {
 
       {photo && <PhotoStrip items={stripItems} active={active} onActive={setActive} onMemo={setItemMemo} onRemove={removeItem} onAdd={addPhotos} adding={adding} />}
       {photo && <AIResultCard ai={photo.ai} highlight />}
+      {photo && !photo.ai?.mock && (
+        <div className="flex flex-col gap-2 rounded-xl border border-line bg-white p-3">
+          {boxes === null
+            ? <button type="button" onClick={showBoxes} disabled={locating} className="h-11 rounded-lg border border-brand text-sm font-semibold text-brand disabled:opacity-40">{locating ? 'AI가 문제 위치를 찾는 중…' : '문제 위치를 빨간 박스로 표시해 보기'}</button>
+            : boxes.length > 0
+              ? <><BoxedPhoto src={preview} boxes={boxes} alt="문제 위치 표시" /><p className="text-[13px] text-sub">AI가 추정한 위치라 틀릴 수 있어요. 제보에는 영향이 없습니다.</p></>
+              : <p className="text-[13px] text-sub">표시할 만큼 뚜렷한 부분을 찾지 못했어요.</p>}
+        </div>
+      )}
       {photo && <NearbyReports pos={pos} accuracy={pos?.accuracy} category={photo.ai && !photo.ai.mock ? photo.ai.category : null} />}
 
       <div>
