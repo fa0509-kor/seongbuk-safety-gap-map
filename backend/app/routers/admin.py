@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from .. import corrections, ledger, scoring, screening, serialize
+from .. import corrections, ledger, review_time, scoring, screening, serialize
 from ..constants import AFTERCARE_RADIUS_M, CATEGORIES, KST, RECHECK_DAYS, STATUSES
 from ..db import get_db
 from ..models import Photo, Report, ReportLink, StatusHistory, now
@@ -105,7 +105,8 @@ def summary(db: Session = Depends(get_db)):
             "open_by_status": open_by_status,
             "on_time": scoring.on_time(rows),
             "screening": screening.screening([r for r in rows if not r.is_demo]),
-            "aftercare": aftercare}
+            "aftercare": aftercare,
+            "first_review": review_time.stats(live)}
 
 
 @router.get("/reports/{rid}/place-history", response_model=list[PlaceHistoryItem])

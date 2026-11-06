@@ -200,3 +200,59 @@ def test_cancel_only_own_browser_and_only_before_review():
     assert client.patch(f"/api/admin/reports/{id2}", json={"status": "review"}).status_code == 200
     bad = client.post(f"/api/reports/{r2['public_id']}/cancel", json={"client_key": A})
     assert bad.status_code == 400
+
+
+def test_photos_hidden_until_done_except_for_owner():
+    A, B = "photo-key-aaaa0001", "photo-key-bbbb0002"
+    r = make(37.9700, 127.7000, client_key=A)
+    pid = r["public_id"]
+    assert r["photo_url"] and r["photos"]                                   # 제보한 사람의 응답에는 사진이 있음
+    anyone = client.get("/api/reports", params={"ids": pid}).json()[0]       # 번호만 아는 사람
+    assert anyone["photo_url"] is None and anyone["after_photo_url"] is None and anyone["photos"] == []
+    assert client.get("/api/reports", params={"ids": pid, "client_key": B}).json()[0]["photo_url"] is None   # 다른 브라우저
+    mine = client.get("/api/reports", params={"ids": pid, "client_key": A}).json()[0]
+    assert mine["photo_url"] and mine["photos"]                             # 본인 브라우저는 완료 전에도 보임
+    assert client.get(f"/api/reports/{pid}").json()["photo_url"] is None
+    assert client.post(f"/api/reports/{pid}/confirm").json()["photo_url"] is None   # 나도 봤어요 응답에도 사진 없음
+    # 식별값이 없던 옛 제보는 완료 전에 본인도 사진을 못 봄(본인 확인이 안 되므로)
+    old = make(37.9710, 127.7010)
+    assert client.get("/api/reports", params={"ids": old["public_id"], "client_key": A}).json()[0]["photo_url"] is None
+
+    finish(pid)                                                             # 조치 완료 → 누구에게나 공개 (지도의 조치 전·후 보기)
+    done = client.get("/api/reports", params={"ids": pid}).json()[0]
+    assert done["photo_url"] and done["photos"]
+    # 담당자 화면은 항상 사진이 보임
+    assert admin_item(pid)["photo_url"]
+
+    
+def test_first_review_hours_and_summary():
+    from datetime import datetime, timedelta, timezone
+    from backend.app import review_time
+    from backend.app.models import Report, StatusHistory
+    r = make(37.9500, 127.6000)
+    with SessionLocal() as db:
+        row = db.query(Report).filter(Report.public_id == r["public_id"]).one()
+        t0 = datetime.now(timezone.utc) - timedelta(hours=30)
+        row.created_at = t0
+        row.history[0].created_at = t0
+        db.commit()
+        waiting = review_time.stats([row])
+        assert waiting["count"] == 0 and waiting["waiting"] == 1 and 29.9 <= waiting["oldest_waiting_hours"] <= 30.2   # 아직 접수 상태 = 확인 대기
+        assert review_time.first_review_hours(row) is None
+    # 메모만 남기면 확인이 아니고, 상태가 바뀌면 그 시각이 첫 확인
+    rid = admin_item(r["public_id"])["id"]
+    assert client.patch(f"/api/admin/reports/{rid}", json={"note": "메모만"}).status_code == 200
+    with SessionLocal() as db:
+        assert review_time.first_review_hours(db.get(Report, rid)) is None
+    assert client.patch(f"/api/admin/reports/{rid}", json={"status": "review"}).status_code == 200
+    with SessionLocal() as db:
+        row = db.get(Report, rid)
+        h = next(x for x in row.history if x.to_status == "review")
+        h.created_at = row.created_at + timedelta(hours=3)
+        db.commit()
+        db.refresh(row)
+        assert abs(review_time.first_review_hours(row) - 3.0) < 0.01
+        one = review_time.stats([row])
+        assert one["count"] == 1 and one["avg_hours"] == 3.0 and one["median_hours"] == 3.0 and one["within_24h_pct"] == 100 and one["waiting"] == 0
+    fr = client.get("/api/admin/summary").json()["first_review"]
+    assert fr["count"] >= 1 and fr["avg_hours"] is not None and set(fr) >= {"avg_hours", "median_hours", "within_24h_pct", "waiting", "oldest_waiting_hours"}

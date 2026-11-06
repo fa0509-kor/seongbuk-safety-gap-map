@@ -1,4 +1,5 @@
 import { formatTaken } from '../lib/exif.js'
+import { qualityText } from '../lib/photoQuality.js'
 
 // 제보 화면: 붙인 사진(최대 4장) 한 줄과, 사진 수만큼의 메모 칸. 사진마다 번호를 달고 메모 칸 이름에도 같은 번호를 쓴다.
 // 사진 모서리의 X로 지우고(대표를 지우면 다음 사진이 대표가 됨), 대표가 아닌 사진은 '대표로 지정'으로 대표를 바꾼다.
@@ -35,6 +36,7 @@ export default function PhotoStrip({ items, onMemo, onRemove, onMakeMain, onAdd,
               <input value={it.memo} maxLength={200} onChange={(e) => onMemo(i, e.target.value)}
                 placeholder="예: 담장 아래쪽 금이 간 곳" className="h-11 rounded-lg border border-line bg-white px-3 text-[15px] text-ink" />
             </label>
+            {qualityText(it.quality) && <p className="rounded bg-amber-50 px-2 py-1.5 text-[13px] leading-snug">{qualityText(it.quality)}</p>}
             <div className="flex items-center justify-between text-[13px] text-sub">
               <span>{it.takenAt ? `촬영 ${formatTaken(it.takenAt)}` : '촬영 일시를 알 수 없어요'}</span>
               {i > 0 && <button type="button" onClick={() => onMakeMain(i)} className="-my-3 py-3 font-medium text-brand underline">대표로 지정</button>}

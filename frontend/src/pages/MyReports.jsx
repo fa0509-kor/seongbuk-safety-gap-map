@@ -2,7 +2,6 @@ import Brand from '../components/Brand.jsx'
 import { useEffect, useRef, useState } from 'react'
 import BeforeAfter from '../components/BeforeAfter.jsx'
 import ClientIdBox from '../components/ClientIdBox.jsx'
-import RewardBox from '../components/RewardBox.jsx'
 import StatusSteps from '../components/StatusSteps.jsx'
 import { api } from '../lib/api.js'
 import { formatTaken } from '../lib/exif.js'
@@ -22,7 +21,7 @@ export default function MyReports() {
 
   useEffect(() => {
     let alive = true
-    const load = () => api.myReports(myReports.ids())
+    const load = () => api.myReports(myReports.ids(), myReports.clientKey())
       .then((r) => {
         if (!alive) return
         setList(r)
@@ -62,7 +61,7 @@ export default function MyReports() {
 
   if (error) return <p className="p-5 text-danger">불러오기 실패: {error}</p>
   if (!list) return <p className="p-5">불러오는 중…</p>
-  if (!list.length) return <section className="min-h-full bg-page p-5 pt-6"><header className="resident-header"><Brand /><h1>내 제보</h1></header><p className="mt-4 text-sub">아직 이 폰에서 보낸 제보가 없습니다.</p><div className="mt-4 flex flex-col gap-3.5"><RewardBox /><ClientIdBox /></div></section>
+  if (!list.length) return <section className="min-h-full bg-page p-5 pt-6"><header className="resident-header"><Brand /><h1>내 제보</h1></header><p className="mt-4 text-sub">아직 이 폰에서 보낸 제보가 없습니다.</p><div className="mt-4"><ClientIdBox /></div></section>
 
   // 접수 후 경과일, 완료까지 걸린 일수, 처리 대상 아님 사유 (리뷰: '처리 상황도 이유도 모른다'는 불만 대응)
   const days = (a, b = Date.now()) => Math.max(0, Math.floor((new Date(b).getTime() - new Date(a).getTime()) / 86400000))
@@ -148,7 +147,6 @@ export default function MyReports() {
           </article>
         )
       })}
-      <RewardBox />
       <ClientIdBox />
     </section>
   )

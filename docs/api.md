@@ -128,11 +128,5 @@
 - `GET /api/admin/corrections/summary` AI 유형 → 담당자가 고른 유형 쌍별 건수(`total`, `pairs[{ai, true, count, match}]`).
 - `POST /api/reports` 본문에 `client_key?`(8~40자, 브라우저 무작위 값) 추가. 응답에는 나가지 않는다. 관리자 제보 응답에 `same_client_reports`(같은 브라우저 제보 수, 이 제보 포함), `same_client_24h`(그중 이 제보 전후 24시간 안). 식별값이 없으면 null.
 - 식별번호·별명: `POST /api/reports` 본문에 `client_nickname?`(20자) 추가. 관리자 제보 응답에 `client_code`(식별값 앞 8자리, 주민이 '내 제보' 화면에서 보는 번호와 같음), `client_nickname`. 식별값 전체는 어느 응답에도 나가지 않는다.
-
-### 주민 보상(포인트)
-- `GET /api/rewards/me?client_key` 내 포인트(잔액, 이번 달 적립 건수·포인트와 한도, 적립 내역, 교환 신청, 전화번호 인증 여부). 인증이 유효하면 열 때마다 유효 시간(2시간)이 연장된다.
-- `POST /api/rewards/phone/request` `{client_key, phone}` 인증번호 받기(브라우저당 한 시간 5번). **문자 발송은 아직 연동 전**이라 '테스트 인증'으로 인증번호를 응답에 담아 준다. 배포 환경(VERCEL)에서는 `ALLOW_TEST_SMS=1`이 없으면 501.
-- `POST /api/rewards/phone/verify` `{client_key, phone, code}` 인증 확인. 같은 번호로 인증한 브라우저들의 적립분이 합산된다.
-- `POST /api/rewards/redeem` `{client_key, amount}` 기프티콘 교환 신청(인증 유효, 3,000P 이상, 1,000P 단위, 잔액 안).
-- 담당자: `POST /api/admin/reports/{id}/reward` 보상 승인(일반 1,000P·긴급 3,000P, 같은 곳 중복·월 한도 초과는 0점으로 기록), `GET /api/admin/rewards/redeems?status=`, `PATCH /api/admin/rewards/redeems/{id}` 발송 완료 처리. 관리자 제보 응답에 `reward_points`, `reward_note`.
-- 환경변수: `REWARD_SALT`(전화번호 해시용, 배포 때 설정), `ALLOW_TEST_SMS`, `SMS_PROVIDER`(연동 후).
+- 사진 공개 범위: `GET /api/reports?ids=`는 선택 인자 `client_key`(내 브라우저 식별값)를 받는다. **조치 완료 전 제보의 `photo_url`·`after_photo_url`·`photos`는 `client_key`가 제보를 보낸 브라우저와 같을 때만** 채워지고, 아니면 null/빈 목록이다. 조치 완료된 제보는 누구에게나 보인다. `GET /api/reports/{번호}`, `POST .../confirm`도 같은 규칙(식별값 없이 부르므로 완료 전 사진 없음).
+- `GET /api/admin/summary`에 `first_review{count, avg_hours, median_hours, within_24h_pct, waiting, oldest_waiting_hours}` 추가. 접수에서 다른 상태(검토·조치·완료)로 처음 바뀐 시점까지 걸린 시간(메모만 남긴 것은 확인으로 세지 않음). 아직 접수 상태인 제보는 `waiting`으로 센다. 체험·오탐 제외.

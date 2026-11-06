@@ -103,12 +103,6 @@ export default function AdminDetail() {
             조치 후 사진 올리기
             <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files[0] && afterPhoto(e.target.files[0])} />
           </label>
-          {r.source === 'resident' && !r.is_demo && !r.false_positive && r.client_code && (
-            r.reward_points == null
-              ? <button type="button" onClick={async () => { try { const o = await api.adminApproveReward(id); setMsg(o.points ? `보상 ${o.points.toLocaleString('ko-KR')}P 적립 (${o.grade === 'urgent' ? '긴급' : '일반'})` : `승인했지만 적립 0P: ${o.note}`); setR(await api.adminReport(id)) } catch (e) { setMsg(`실패: ${e.message}`) } }}
-                  className="rounded border border-brand py-1 text-sm font-semibold text-brand">보상 승인 (포인트 적립)</button>
-              : <p className="text-sm text-gray-600">보상: {r.reward_points.toLocaleString('ko-KR')}P{r.reward_note && ` (${r.reward_note})`}</p>
-          )}
           {msg && <p className="text-xs text-gray-500">{msg}</p>}
         </div>
       </div>

@@ -98,6 +98,5 @@ def report(r: Report, admin: bool = False) -> dict:
                 "dispatch": r.dispatch, "false_positive": r.false_positive, "true_category": r.true_category, "is_demo": r.is_demo,
                 "gap_rule": r.gap_rule, "gap_reason": r.gap_reason,
                 "priority": scoring.score(r), "season": SEASONS.get(utc(r.created_at).astimezone(KST).month),
-                **photo_check(r), **client_counts(r),
-                "reward_points": r.reward.points if r.reward else None, "reward_note": r.reward.note if r.reward else None}
+                **photo_check(r), **client_counts(r)}
     return out

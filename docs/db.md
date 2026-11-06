@@ -65,16 +65,6 @@
 ## report_clients — 제보를 보낸 브라우저 식별값
 `report_id`(제보당 하나), `client_key`(브라우저가 만든 무작위 값), `nickname`(주민이 정한 별명, 선택, 20자), `created_at`. 같은 브라우저에서 올라온 제보를 담당자가 확인하는 용도다. 사람을 특정하지 못하고(브라우저 데이터 삭제·시크릿 모드·다른 기기면 다른 값), 식별값 자체는 어떤 응답에도 내보내지 않는다. 새 표라서 서버가 켜질 때 자동 생성(ALTER 없음).
 
-## reward_points — 보상 적립 기록
-`report_id`(제보당 하나), `client_key`, `points`(0이면 중복·월 한도로 적립 안 함), `grade`(normal·urgent), `note`(0점 이유), `created_at`. 담당자가 승인할 때 만들어진다. 새 표, 자동 생성.
-
-## reward_phones — 브라우저와 인증한 전화번호의 연결
-`client_key`(unique), `phone_hash`(전화번호 해시), `last4`(뒤 4자리), `verified_at`, `last_active_at`(포인트 화면을 열 때마다 갱신, 2시간 유효). 번호 원문은 저장하지 않는다. 새 표.
-
-## reward_codes — 인증번호 (해시, 5분 유효, 5번 틀리면 폐기)
-## reward_redeems — 기프티콘 교환 신청
-`phone_hash`, `last4`, `amount`, `status`(requested·done), `created_at`, `handled_at`. 새 표.
-
 ## status_history — 처리 이력
 | 열 | 형식 | 설명 |
 | --- | --- | --- |

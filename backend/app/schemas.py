@@ -169,8 +169,6 @@ class AdminReportOut(ReportOut):
     gap_rule: str | None = Field(None, description="공백 탐지 항목의 규칙 이름")
     gap_reason: str | None = None
     priority: Priority
-    reward_points: int | None = Field(None, description="보상 승인 결과 적립 포인트. 아직 승인하지 않았으면 null, 0이면 중복·한도로 적립 안 함")
-    reward_note: str | None = Field(None, description="0점인 이유")
     season: str | None = Field(None, description="접수 달 기준 계절 점검 시기(해빙기 2~3월, 우기 5~6월, 동절기 11~12월. 팀 가정)")
     photo_age_days: int | None = Field(None, description="대표 사진 촬영일이 접수일보다 며칠 앞서는지. 촬영일 정보가 없으면 null")
     same_client_reports: int | None = Field(None, description="같은 브라우저(client_key)에서 올라온 제보 수(이 제보 포함). 식별값이 없으면 null")
@@ -218,6 +216,15 @@ class PlaceHistoryItem(BaseModel):
     not_fixed: int = 0
 
 
+class FirstReview(BaseModel):
+    count: int = Field(0, description="접수에서 다른 상태로 처음 바뀐(=첫 확인이 있었던) 제보 수")
+    avg_hours: float | None = Field(None, description="접수→첫 확인 평균 시간. 확인된 제보가 없으면 null")
+    median_hours: float | None = None
+    within_24h_pct: int | None = Field(None, description="첫 확인이 24시간 안에 이뤄진 비율(%)")
+    waiting: int = Field(0, description="아직 접수 상태(확인 전)인 제보 수")
+    oldest_waiting_hours: float | None = Field(None, description="확인 전 제보 중 가장 오래 기다린 시간")
+
+
 class AdminSummary(BaseModel):
     today_new: int = Field(description="오늘(한국 시간) 들어온 주민·CCTV 제보 (공백 후보 제외)")
     overdue_open: int = Field(description="기한이 지났는데 완료가 아닌 건")
@@ -227,6 +234,7 @@ class AdminSummary(BaseModel):
     on_time: OnTime = Field(description="기한 내 조치 시작률 (주민·CCTV 제보, 체험용·오탐 제외)")
     screening: Screening = Field(description="데이터 사전 점검 지표 (docs/benchmark.md)")
     aftercare: AftercareSummary = Field(description="조치 완료 이후 사후 관리 건수")
+    first_review: FirstReview = Field(default_factory=FirstReview, description="접수 후 첫 확인까지 걸린 시간 (체험·오탐 제외)")
 
 
 class PublicStats(BaseModel):

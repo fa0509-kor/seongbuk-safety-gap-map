@@ -10,6 +10,7 @@ import StepBar from '../components/StepBar.jsx'
 import { takenAt } from '../lib/exif.js'
 import { api } from '../lib/api.js'
 import { currentPosition, resizeImage } from '../lib/image.js'
+import { checkPhotoQuality } from '../lib/photoQuality.js'
 import { myReports } from '../lib/myReports.js'
 
 // 주민 2 제보: 1 사진(여러 장) → 2 위치(자동 + 핀 조정) → 3 확인(AI 결과, 시설 종류) → 보내기
@@ -59,7 +60,7 @@ export default function Report() {
   // 바뀔 때마다 저장 (불러오기 전의 빈 값이 저장된 것을 지우지 않도록 불러온 뒤부터)
   useEffect(() => {
     if (!draftReady) return
-    myReports.saveDraft({ photos: photos.map(({ key, memo, takenAt: t, ai }) => ({ key, memo, takenAt: t, ai })), facility, aiDrafted })
+    myReports.saveDraft({ photos: photos.map(({ key, memo, takenAt: t, ai, quality }) => ({ key, memo, takenAt: t, ai, quality })), facility, aiDrafted })
   }, [photos, facility, aiDrafted, draftReady])
 
   useEffect(() => {
@@ -79,10 +80,11 @@ export default function Report() {
       for (const file of list) {
         const taken = await takenAt(file)
         const blob = await resizeImage(file)
+        const quality = await checkPhotoQuality(blob) // 어둡거나 흔들렸는지 (경고만 함)
         const up = await api.uploadPhoto(blob)
         const draft = aiDraft(up.ai)
         if (draft) setAiDrafted(true)
-        setPhotos((l) => (l.length >= MAX_PHOTOS ? l : [...l, { key: up.key, preview: URL.createObjectURL(blob), memo: draft, takenAt: taken, ai: up.ai }]))
+        setPhotos((l) => (l.length >= MAX_PHOTOS ? l : [...l, { key: up.key, preview: URL.createObjectURL(blob), memo: draft, takenAt: taken, ai: up.ai, quality }]))
       }
       setLastFiles(null)
     } catch (e) { setError(`사진 처리 실패: ${e.message}`) } finally { setUploading(false) }

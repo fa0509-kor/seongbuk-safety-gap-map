@@ -111,14 +111,14 @@ def test_report_with_extra_photos_memo_and_taken_at():
     from io import BytesIO
     from zipfile import ZipFile
     main, extra1, extra2 = upload(), upload(), upload()
-    body = {"photo_key": main["key"], "lat": 37.59, "lon": 127.02, "taken_at": "2026-11-06T05:03:00Z", "photo_memo": "대표 사진 메모",
+    body = {"photo_key": main["key"], "lat": 37.59, "lon": 127.02, "taken_at": "2026-11-06T05:03:00Z", "photo_memo": "대표 사진 메모", "client_key": "extra-photo-key-0001",
             "extra_photos": [{"photo_key": extra1["key"], "memo": "균열 가까이", "taken_at": "2026-11-06T05:04:00Z"},
                              {"photo_key": extra2["key"]}, {"photo_key": main["key"]}]}  # 대표와 같은 키는 무시
     r = client.post("/api/reports", json=body).json()
     assert [p["position"] for p in r["photos"]] == [0, 1, 2]
     assert r["photos"][0]["memo"] == "대표 사진 메모" and r["photos"][0]["taken_at"].startswith("2026-11-06T05:03")
     assert r["photos"][1]["memo"] == "균열 가까이" and r["photos"][2]["memo"] is None
-    mine = client.get("/api/reports", params={"ids": r["public_id"]}).json()[0]
+    mine = client.get("/api/reports", params={"ids": r["public_id"], "client_key": "extra-photo-key-0001"}).json()[0]  # 완료 전 사진은 제보한 브라우저에게만
     assert len(mine["photos"]) == 3
     # 4장을 넘기면 거절
     too_many = {**body, "extra_photos": [{"photo_key": upload()["key"]} for _ in range(4)]}

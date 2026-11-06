@@ -75,7 +75,6 @@ class Report(Base):
     recurrence_link: Mapped[ReportLink | None] = relationship(
         foreign_keys="ReportLink.report_id", back_populates="report", uselist=False, cascade="all, delete-orphan")
     client: Mapped[ReportClient | None] = relationship(back_populates="report", uselist=False, cascade="all, delete-orphan")
-    reward: Mapped[RewardPoint | None] = relationship(back_populates="report", uselist=False, cascade="all, delete-orphan")
 
 
 class ReportPhoto(Base):
@@ -120,60 +119,6 @@ class ReportClient(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
     report: Mapped[Report] = relationship(back_populates="client")
-
-
-class RewardPoint(Base):
-    """담당자가 승인한 제보의 포인트 적립 기록. 제보 하나에 하나. points가 0이면 승인은 했지만 중복·월 한도로 적립하지 않은 것(note에 이유)."""
-    __tablename__ = "reward_points"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    report_id: Mapped[int] = mapped_column(ForeignKey("reports.id"), unique=True, index=True)
-    client_key: Mapped[str] = mapped_column(String(40), index=True)   # 제보를 보낸 브라우저. 전화번호를 인증하면 번호 기준으로 합산
-    points: Mapped[int] = mapped_column(Integer, default=0)
-    grade: Mapped[str] = mapped_column(String(8), default="normal")   # normal / urgent
-    note: Mapped[str | None] = mapped_column(String(60))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
-
-    report: Mapped[Report] = relationship(back_populates="reward")
-
-
-class RewardPhone(Base):
-    """브라우저(client_key)와 인증한 전화번호의 연결. 전화번호 원문은 저장하지 않고 해시와 뒤 4자리만 둔다.
-    last_active_at은 포인트 화면을 열 때마다 갱신하고, REWARD_SESSION_HOURS가 지나면 다시 인증해야 한다."""
-    __tablename__ = "reward_phones"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    client_key: Mapped[str] = mapped_column(String(40), unique=True, index=True)
-    phone_hash: Mapped[str] = mapped_column(String(64), index=True)
-    last4: Mapped[str] = mapped_column(String(4))
-    verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
-    last_active_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
-
-
-class RewardCode(Base):
-    """전화번호 인증번호(해시로 저장, 5분 유효, 5번 틀리면 폐기)."""
-    __tablename__ = "reward_codes"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    client_key: Mapped[str] = mapped_column(String(40), index=True)
-    phone_hash: Mapped[str] = mapped_column(String(64))
-    code_hash: Mapped[str] = mapped_column(String(64))
-    tries: Mapped[int] = mapped_column(Integer, default=0)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
-
-
-class RewardRedeem(Base):
-    """기프티콘 교환 신청. 담당자가 발송을 마치면 status를 done으로 바꾼다."""
-    __tablename__ = "reward_redeems"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    phone_hash: Mapped[str] = mapped_column(String(64), index=True)
-    last4: Mapped[str] = mapped_column(String(4))
-    amount: Mapped[int] = mapped_column(Integer)
-    status: Mapped[str] = mapped_column(String(10), default="requested")  # requested / done
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
-    handled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class ReportLink(Base):

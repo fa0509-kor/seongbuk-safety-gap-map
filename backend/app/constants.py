@@ -29,15 +29,6 @@ RECUR_POINTS = 10             # 재발 가산점
 STALE_PHOTO_DAYS = 3          # 촬영일이 접수일보다 이 일수 넘게 앞서면 '오래된 사진'으로 표시 (옛 사진 재사용 확인용, 점수에는 반영하지 않음)
 SEASONS = {2: "해빙기", 3: "해빙기", 5: "우기", 6: "우기", 11: "동절기", 12: "동절기"}  # 접수 달(한국 시간) → 계절 점검 시기
 
-# 주민 보상(포인트). 아래 숫자는 모두 팀 가정이다 (근거와 산식은 docs/decisions.md '주민 보상').
-REWARD_NORMAL_POINTS = 1000   # 일반 제보 1건 (1포인트 = 1원으로 가정)
-REWARD_URGENT_POINTS = 3000   # 긴급(우선순위 점수가 URGENT_THRESHOLD 이상) 제보 1건
-REWARD_MONTH_COUNT = 10       # 한 사람(전화번호, 인증 전에는 브라우저)이 한 달에 적립받는 최대 건수
-REWARD_MONTH_POINTS = 30000   # 한 달 적립 상한
-REWARD_MIN_REDEEM = 3000      # 기프티콘 교환 최소 포인트
-REWARD_SESSION_HOURS = 2      # 전화번호 인증 유효 시간. 포인트 화면을 열 때마다 연장
-REWARD_CODE_MINUTES = 5       # 인증번호 유효 시간
-
 
 def radius_for(accuracy_m: float | None) -> int:
     """같은 곳 판정 반경(m). 위치 정확도(m)를 모르면 기본값, 알면 1.5배를 최소~최대 범위로 자른다."""

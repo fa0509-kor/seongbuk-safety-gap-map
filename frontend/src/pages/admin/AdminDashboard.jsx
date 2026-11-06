@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import RewardRequests from '../../components/RewardRequests.jsx'
+import FirstReviewCard from '../../components/FirstReviewCard.jsx'
 import { api } from '../../lib/api.js'
 
 // 관리자 1 대시보드: 새 제보 알림 줄, 오늘 신규·기한 초과 미조치·이번 달 조치 완료·평균 처리 기간, 우선순위 상위
@@ -71,7 +71,7 @@ export default function AdminDashboard() {
       {ac && (ac.reopened + ac.recurred + ac.recheck_due > 0) && (
         <div className="admin-notice">조치 후 관리 · 아직 그대로라는 의견 {ac.reopened}건 · 재발 {ac.recurred}건 · 재점검 필요 {ac.recheck_due}건</div>
       )}
-      <RewardRequests />
+      <FirstReviewCard fr={summary?.first_review} />
       <div className="dashboard-stats grid grid-cols-4 gap-4">
         {cards.map(([k, v, sub]) => (
           <div key={k} className="admin-card kpi"><span className="kpi-label">{k}</span><b className="kpi-value">{v ?? '—'}</b><span className="kpi-sub">{sub}</span></div>

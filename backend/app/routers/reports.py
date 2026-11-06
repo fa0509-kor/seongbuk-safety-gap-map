@@ -80,7 +80,18 @@ def _link_recurrence(db: Session, r: Report, accuracy_m: float | None) -> None:
 
 def _q():
     return select(Report).options(selectinload(Report.history), selectinload(Report.photo), selectinload(Report.photos),
-                                  selectinload(Report.feedback), selectinload(Report.recurrence_link))
+                                  selectinload(Report.feedback), selectinload(Report.recurrence_link), selectinload(Report.client))
+
+
+def _public(r: Report, client_key: str | None = None) -> dict:
+    """주민·공개 화면용 제보. **조치 완료 전 제보의 사진은 제보를 보낸 브라우저(client_key가 같음)에게만** 내보낸다.
+    제보 번호는 지도에 공개돼 있어서, 번호만 알아도 사진을 볼 수 있으면 사실상 모든 제보 사진이 공개되기 때문이다.
+    조치 완료된 제보는 누구에게나 사진을 보여 준다(지도의 조치 전·후 보기). 식별값이 없던 옛 제보는 본인 확인이 안 되므로 완료 전에는 사진을 숨긴다."""
+    out = serialize.report(r)
+    owner = bool(client_key and r.client is not None and r.client.client_key == client_key)
+    if r.status == "done" or owner:
+        return out
+    return out | {"photo_url": None, "after_photo_url": None, "photos": []}
 
 
 @router.post("/api/reports", response_model=ReportOut)
@@ -90,10 +101,12 @@ def post_report(body: ReportCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/api/reports", response_model=list[ReportOut])
-def my_reports(ids: str = Query(..., description="public_id를 쉼표로 이어 붙인 값"), db: Session = Depends(get_db)):
+def my_reports(ids: str = Query(..., description="public_id를 쉼표로 이어 붙인 값"),
+               client_key: str | None = Query(None, min_length=8, max_length=40, description="내 브라우저 식별값. 같으면 조치 완료 전에도 내 제보 사진이 나옴"),
+               db: Session = Depends(get_db)):
     wanted = [i for i in ids.split(",") if i][:50]
     rows = db.scalars(_q().where(Report.public_id.in_(wanted)).order_by(Report.created_at.desc())).all()
-    return [serialize.report(r) for r in rows]
+    return [_public(r, client_key) for r in rows]
 
 
 @router.get("/api/reports/map")
@@ -180,7 +193,7 @@ def confirm(public_id: str, db: Session = Depends(get_db)):
     r.confirm_count = (r.confirm_count or 0) + 1
     db.commit()
     db.refresh(r)
-    return serialize.report(r)
+    return _public(r)  # 누르는 사람이 제보한 사람인지 모르므로 조치 완료 전 사진은 숨긴다
 
 
 @router.post("/api/reports/{public_id}/cancel")
@@ -215,7 +228,7 @@ def feedback(public_id: str, body: FeedbackIn, db: Session = Depends(get_db)):
         r.feedback.append(ReportFeedback(kind=body.kind, client_key=body.client_key))
     db.commit()
     db.refresh(r)
-    return serialize.report(r)
+    return _public(r, body.client_key)
 
 
 @router.get("/api/reports/{public_id}", response_model=ReportOut)
@@ -223,4 +236,4 @@ def get_report(public_id: str, db: Session = Depends(get_db)):
     r = db.scalars(_q().where(Report.public_id == public_id)).first()
     if not r:
         raise HTTPException(404, "제보 없음")
-    return serialize.report(r)
+    return _public(r)
