@@ -13,7 +13,7 @@ from ..constants import (CROSS_CHECK_MIN, KST, NOT_FIXED_MIN, RECENT_DONE_DAYS, 
                          radius_for)
 from ..db import get_db
 from ..models import Photo, Report, ReportClient, ReportFeedback, ReportLink, ReportPhoto, StatusHistory, now
-from ..schemas import FeedbackIn, NearbyReport, PublicStats, ReportCreate, ReportOut
+from ..schemas import CancelIn, FeedbackIn, NearbyReport, PublicStats, ReportCreate, ReportOut
 
 router = APIRouter(tags=["reports"])
 
@@ -181,6 +181,22 @@ def confirm(public_id: str, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(r)
     return serialize.report(r)
+
+
+@router.post("/api/reports/{public_id}/cancel")
+def cancel_report(public_id: str, body: CancelIn, db: Session = Depends(get_db)):
+    """주민이 자기 제보를 취소한다(삭제). 제보를 보낸 브라우저(식별값이 같음)만, 담당자가 아직 손대지 않은 접수 상태에서만 가능하다.
+    지도에 제보 번호가 공개돼 있어서 번호만으로는 취소할 수 없게 식별값을 함께 확인한다. 식별값이 없던 옛 제보는 취소할 수 없다."""
+    r = db.scalar(select(Report).where(Report.public_id == public_id, Report.source == "resident"))
+    if r is None:
+        raise HTTPException(404, "제보 없음")
+    if r.client is None or r.client.client_key != body.client_key:
+        raise HTTPException(403, "이 브라우저에서 보낸 제보만 취소할 수 있어요")
+    if r.status != "received" or len(r.history) > 1:
+        raise HTTPException(400, "담당자가 확인을 시작해서 취소할 수 없어요. 담당 부서에 문의해 주세요")
+    db.delete(r)
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/api/reports/{public_id}/feedback", response_model=ReportOut)

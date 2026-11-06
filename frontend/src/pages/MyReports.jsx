@@ -39,6 +39,15 @@ export default function MyReports() {
     return () => { alive = false; clearInterval(timer); document.removeEventListener('visibilitychange', onVisible) }
   }, [])
 
+  async function cancel(r) {
+    if (!window.confirm('이 제보를 취소할까요? 취소하면 제보와 사진이 삭제되고 되돌릴 수 없어요.')) return
+    try {
+      await api.cancelReport(r.public_id, myReports.clientKey())
+      myReports.remove(r.public_id)
+      setList((l) => l.filter((x) => x.public_id !== r.public_id))
+    } catch (e) { setVoteMsg((m) => ({ ...m, [r.public_id]: e.message })) }
+  }
+
   async function vote(r, kind) {
     try {
       const out = await api.feedback(r.public_id, kind, myReports.clientKey())
@@ -115,6 +124,12 @@ export default function MyReports() {
                 </div>
                 <p className="text-[13px] text-sub">주민 확인: 고쳐졌어요 {ac.fixed}명 · 아직 그대로 {ac.not_fixed}명</p>
                 {voteMsg[r.public_id] && <p className="text-[13px] text-ink">{voteMsg[r.public_id]}</p>}
+              </div>
+            )}
+            {r.status === 'received' && !r.not_target && (
+              <div className="flex flex-col gap-1">
+                <button type="button" onClick={() => cancel(r)} className="h-11 self-start rounded-lg border border-line px-3 text-[13px] font-medium text-danger">제보 취소하기</button>
+                {voteMsg[r.public_id] && <p className="text-[13px] text-sub">{voteMsg[r.public_id]}</p>}
               </div>
             )}
             {r.dept && <p className="text-[13px] text-sub">담당: {r.dept}</p>}

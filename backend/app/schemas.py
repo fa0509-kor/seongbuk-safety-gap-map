@@ -79,6 +79,10 @@ class FeedbackIn(BaseModel):
     client_key: str = Field(min_length=8, max_length=40, description="브라우저가 만든 무작위 값. 한 브라우저당 한 표")
 
 
+class CancelIn(BaseModel):
+    client_key: str = Field(min_length=8, max_length=40, description="제보를 보낼 때 함께 보낸 브라우저 식별값. 같아야 취소할 수 있다")
+
+
 class RecurrenceOut(BaseModel):
     days_after_done: int = Field(description="이전 제보가 완료된 뒤 며칠 만에 같은 곳에서 다시 제보됐는지")
     admin_id: int | None = Field(None, description="관리자 응답에만 있음")

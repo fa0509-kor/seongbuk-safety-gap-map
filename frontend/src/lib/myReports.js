@@ -53,6 +53,7 @@ export const myReports = {
   vote: (publicId) => read(VOTES, {})[publicId] ?? null,
   setVote: (publicId, kind) => write(VOTES, { ...read(VOTES, {}), [publicId]: kind }),
   ids: () => read(IDS, []),
+  remove: (publicId) => write(IDS, read(IDS, []).filter((x) => x !== publicId)),
   add: (publicId) => write(IDS, [publicId, ...read(IDS, []).filter((x) => x !== publicId)].slice(0, 50)),
   seenAt: () => read(SEEN, null),
   markSeen: () => write(SEEN, new Date().toISOString()),

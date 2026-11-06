@@ -175,3 +175,28 @@ def test_client_key_same_browser_count_and_never_exposed():
     from .test_priority import upload
     bad = client.post("/api/reports", json={"photo_key": upload()["key"], "lat": 37.6, "lon": 127.1, "client_key": "짧음"})
     assert bad.status_code == 422
+
+
+def test_cancel_only_own_browser_and_only_before_review():
+    A, B = "device-cccc1111", "device-dddd2222"
+    r = make(37.7100, 127.2100, client_key=A)
+    pid = r["public_id"]
+    assert client.post(f"/api/reports/{pid}/cancel", json={"client_key": B}).status_code == 403   # 다른 브라우저는 취소 못 함
+    assert client.post(f"/api/reports/{pid}/cancel", json={"client_key": "짧음"}).status_code == 422
+    assert client.post("/api/reports/없는번호/cancel", json={"client_key": A}).status_code == 404
+    old = make(37.7110, 127.2110)  # 식별값 없는 제보
+    assert client.post(f"/api/reports/{old['public_id']}/cancel", json={"client_key": A}).status_code == 403
+
+    rid = admin_item(pid)["id"]
+    ok = client.post(f"/api/reports/{pid}/cancel", json={"client_key": A})
+    assert ok.status_code == 200
+    assert client.get("/api/reports", params={"ids": pid}).json() == []
+    assert all(x["public_id"] != pid for x in client.get("/api/admin/reports").json())
+    assert all(f["properties"]["public_id"] != pid for f in client.get("/api/reports/map").json()["features"])
+    assert client.post(f"/api/reports/{pid}/cancel", json={"client_key": A}).status_code == 404   # 이미 취소됨
+
+    r2 = make(37.7120, 127.2120, client_key=A)  # 담당자가 확인을 시작하면 취소 불가
+    id2 = admin_item(r2["public_id"])["id"]
+    assert client.patch(f"/api/admin/reports/{id2}", json={"status": "review"}).status_code == 200
+    bad = client.post(f"/api/reports/{r2['public_id']}/cancel", json={"client_key": A})
+    assert bad.status_code == 400
