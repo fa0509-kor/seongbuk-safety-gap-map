@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import AIResultCard from '../components/AIResultCard.jsx'
 import NearbyReports from '../components/NearbyReports.jsx'
+import PhotoStrip from '../components/PhotoStrip.jsx'
 import PinPicker from '../components/PinPicker.jsx'
+import { takenAt } from '../lib/exif.js'
 import { api } from '../lib/api.js'
 import { currentPosition, resizeImage } from '../lib/image.js'
 import { myReports } from '../lib/myReports.js'
@@ -33,6 +35,11 @@ export default function Report() {
   const [memo, setMemo] = useState('')
   const [memoFromAI, setMemoFromAI] = useState(false) // 메모칸이 AI 초안으로 채워진 상태
   const [lastFile, setLastFile] = useState(null) // '다시 시도'용
+  const [photoMemo, setPhotoMemo] = useState('')    // 대표 사진 메모
+  const [mainTaken, setMainTaken] = useState(null)  // 대표 사진 촬영 일시
+  const [extras, setExtras] = useState([])         // 추가 사진 [{key, preview, memo, takenAt}], 최대 3장
+  const [active, setActive] = useState(null)       // 메모를 적고 있는 사진 번호
+  const [adding, setAdding] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -46,6 +53,7 @@ export default function Report() {
   async function handleFile(file) {
     setError(''); setBusy(true); setPhoto(null); setLastFile(file)
     try {
+      setMainTaken(await takenAt(file))
       const blob = await resizeImage(file)
       setPreview(URL.createObjectURL(blob))
       const up = await api.uploadPhoto(blob)
@@ -56,6 +64,24 @@ export default function Report() {
       }
     } catch (e) { setError(`사진 처리 실패: ${e.message}`) } finally { setBusy(false) }
   }
+
+  // 사진 추가: AI 분류는 대표 사진만 하므로 추가 사진은 저장만 한다 (classify=false)
+  async function addPhotos(files) {
+    setError(''); setAdding(true)
+    try {
+      const next = [...extras]
+      for (const file of files) {
+        if (next.length >= 3) break
+        const blob = await resizeImage(file)
+        const up = await api.uploadPhoto(blob, { classify: false })
+        next.push({ key: up.key, preview: URL.createObjectURL(blob), memo: '', takenAt: await takenAt(file) })
+      }
+      setExtras(next)
+    } catch (e) { setError(`사진 추가 실패: ${e.message}`) } finally { setAdding(false) }
+  }
+  const stripItems = photo ? [{ key: 'main', preview, memo: photoMemo, takenAt: mainTaken }, ...extras] : []
+  const setItemMemo = (i, v) => (i === 0 ? setPhotoMemo(v) : setExtras((l) => l.map((x, k) => (k === i - 1 ? { ...x, memo: v } : x))))
+  const removeItem = (i) => { setExtras((l) => l.filter((_, k) => k !== i - 1)); setActive(null) }
 
   async function useDemoPhoto() {
     const res = await fetch('/demo/sample.jpg')
@@ -69,6 +95,8 @@ export default function Report() {
       const r = await api.createReport({
         photo_key: photo.key, lat: pos?.lat ?? null, lon: pos?.lon ?? null,
         memo: memo || null, is_demo: isDemo, facility_type: facility,
+        taken_at: mainTaken, photo_memo: photoMemo || null,
+        extra_photos: extras.map((x) => ({ photo_key: x.key, memo: x.memo || null, taken_at: x.takenAt })),
       })
       myReports.add(r.public_id)
       myReports.markSeen() // 방금 보낸 제보는 '새 소식'이 아님 → 빨간 점은 담당자가 처리할 때부터
@@ -134,6 +162,7 @@ export default function Report() {
         {pos && <p className="text-xs text-gray-400">{pos.lat.toFixed(5)}, {pos.lon.toFixed(5)} · 핀을 끌어 옮길 수 있어요</p>}
       </div>
 
+      {photo && <PhotoStrip items={stripItems} active={active} onActive={setActive} onMemo={setItemMemo} onRemove={removeItem} onAdd={addPhotos} adding={adding} />}
       {photo && <AIResultCard ai={photo.ai} highlight />}
       {photo && <NearbyReports pos={pos} category={photo.ai && !photo.ai.mock ? photo.ai.category : null} />}
 

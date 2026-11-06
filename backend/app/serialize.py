@@ -25,6 +25,10 @@ def report(r: Report, admin: bool = False) -> dict:
                 "to_status_label": STATUSES.get(h.to_status, h.to_status), "note": h.note,
                 "photo_url": _url(h.photo_key)} for h in r.history]
     after = next((h.photo_key for h in reversed(r.history) if h.photo_key), None)
+    if r.photos:
+        photos = [{"position": p.position, "photo_url": _url(p.photo_key), "memo": p.memo, "taken_at": utc(p.taken_at)} for p in r.photos]
+    else:  # 사진 표가 생기기 전의 제보: 대표 사진 한 장
+        photos = [{"position": 0, "photo_url": _url(r.photo_key), "memo": None, "taken_at": None}] if r.photo_key else []
     out = {
         "public_id": r.public_id, "created_at": utc(r.created_at), "status": r.status,
         "status_label": STATUSES.get(r.status, r.status), "news_at": utc(r.news_at),
@@ -34,7 +38,7 @@ def report(r: Report, admin: bool = False) -> dict:
         "facility_label": departments.facility_label(r.facility_type), "dept": r.dept,
         "dept_note": r.dept_note, "confirm_count": r.confirm_count or 0,
         "cross_checked": (r.confirm_count or 0) >= CROSS_CHECK_MIN,
-        "not_target": bool(r.false_positive), "history": history,
+        "not_target": bool(r.false_positive), "photos": photos, "history": history,
     }
     if admin:
         out |= {"id": r.id, "updated_at": utc(r.updated_at), "source": r.source,

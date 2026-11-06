@@ -36,6 +36,20 @@ export default function AdminDetail() {
         <div className="rounded-lg bg-white p-4">
           <h2 className="mb-2 font-semibold">AI가 본 것</h2>
           {r.photo_url && <img src={r.photo_url} alt="제보 사진" className="mb-2 rounded" />}
+          {(r.photos ?? []).length > 0 && (
+            <ul className="mb-2 flex flex-col gap-2 text-sm">
+              {r.photos.map((p) => (
+                <li key={p.position} className="flex gap-2">
+                  {p.position > 0 && p.photo_url && <img src={p.photo_url} alt={`사진 ${p.position + 1}`} className="h-16 w-16 shrink-0 rounded object-cover" />}
+                  <div>
+                    <span className="font-medium">{p.position === 0 ? '대표 사진' : `사진 ${p.position + 1}`}</span>
+                    <span className="text-gray-500">{p.taken_at ? ` · 촬영 ${new Date(p.taken_at).toLocaleString('ko-KR')}` : ' · 촬영 일시 없음'}</span>
+                    {p.memo && <p>{p.memo}</p>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
           {r.gap_rule
             ? <div className="text-sm"><p className="text-gray-500">AI 판단 없음 — 공공데이터 규칙으로 찾은 항목</p><p className="mt-2 font-semibold">{r.gap_rule}</p><p>{r.gap_reason}</p><p className="text-gray-500">{r.address}</p></div>
             : <AIResultCard ai={r.ai} />}

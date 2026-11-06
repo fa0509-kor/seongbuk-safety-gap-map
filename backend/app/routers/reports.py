@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, selectinload
 from .. import departments, serialize
 from ..constants import CROSS_CHECK_MIN, KST, STATUSES
 from ..db import get_db
-from ..models import Photo, Report, StatusHistory
+from ..models import Photo, Report, ReportPhoto, StatusHistory
 from ..schemas import NearbyReport, PublicStats, ReportCreate, ReportOut
 
 router = APIRouter(tags=["reports"])
@@ -30,6 +30,15 @@ def create_report(body: ReportCreate, db: Session, source: str) -> Report:
                facility_type=body.facility_type or "unknown",
                dept=departments.assign(source, body.facility_type))
     r.history.append(StatusHistory(from_status=None, to_status="received", note=f"제보 접수 · {r.dept}에 1차 배정"))
+    r.photos.append(ReportPhoto(position=0, photo_key=photo.key, memo=body.photo_memo, taken_at=body.taken_at))
+    seen = {photo.key}
+    for extra in body.extra_photos:
+        if extra.photo_key in seen:
+            continue
+        if not db.get(Photo, extra.photo_key):
+            raise HTTPException(400, "extra_photos의 photo_key에 해당하는 사진이 없음")
+        seen.add(extra.photo_key)
+        r.photos.append(ReportPhoto(position=len(r.photos), photo_key=extra.photo_key, memo=extra.memo, taken_at=extra.taken_at))
     db.add(r)
     db.commit()
     db.refresh(r)
@@ -37,7 +46,7 @@ def create_report(body: ReportCreate, db: Session, source: str) -> Report:
 
 
 def _q():
-    return select(Report).options(selectinload(Report.history), selectinload(Report.photo))
+    return select(Report).options(selectinload(Report.history), selectinload(Report.photo), selectinload(Report.photos))
 
 
 @router.post("/api/reports", response_model=ReportOut)

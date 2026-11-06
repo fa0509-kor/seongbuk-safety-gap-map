@@ -104,3 +104,31 @@ def test_nearby_reports_and_not_target_flag():
     mine = client.get("/api/reports", params={"ids": a["public_id"]}).json()[0]
     assert mine["not_target"] is True and "공사" in mine["dept_note"]
     assert a["public_id"] not in [x["public_id"] for x in client.get("/api/reports/nearby", params={"lat": base[0], "lon": base[1]}).json()]
+
+
+def test_report_with_extra_photos_memo_and_taken_at():
+    """사진 여러 장(대표 + 추가), 사진별 메모, 촬영 일시가 저장·응답되고 엑셀 대장에도 나온다."""
+    from io import BytesIO
+    from zipfile import ZipFile
+    main, extra1, extra2 = upload(), upload(), upload()
+    body = {"photo_key": main["key"], "lat": 37.59, "lon": 127.02, "taken_at": "2026-11-06T05:03:00Z", "photo_memo": "대표 사진 메모",
+            "extra_photos": [{"photo_key": extra1["key"], "memo": "균열 가까이", "taken_at": "2026-11-06T05:04:00Z"},
+                             {"photo_key": extra2["key"]}, {"photo_key": main["key"]}]}  # 대표와 같은 키는 무시
+    r = client.post("/api/reports", json=body).json()
+    assert [p["position"] for p in r["photos"]] == [0, 1, 2]
+    assert r["photos"][0]["memo"] == "대표 사진 메모" and r["photos"][0]["taken_at"].startswith("2026-11-06T05:03")
+    assert r["photos"][1]["memo"] == "균열 가까이" and r["photos"][2]["memo"] is None
+    mine = client.get("/api/reports", params={"ids": r["public_id"]}).json()[0]
+    assert len(mine["photos"]) == 3
+    # 4장을 넘기면 거절
+    too_many = {**body, "extra_photos": [{"photo_key": upload()["key"]} for _ in range(4)]}
+    assert client.post("/api/reports", json=too_many).status_code == 422
+    # 없는 사진 키는 거절
+    assert client.post("/api/reports", json={**body, "extra_photos": [{"photo_key": "nope.jpg"}]}).status_code == 400
+    # 예전 방식(사진 한 장만)도 그대로 되고, 응답에는 대표 사진 한 장이 들어 있음
+    old = client.post("/api/reports", json={"photo_key": upload()["key"]}).json()
+    assert len(old["photos"]) == 1 and old["photos"][0]["taken_at"] is None
+    # 엑셀 대장에 촬영 일시와 사진 수
+    xlsx = client.get("/api/admin/ledger.xlsx").content
+    sheet = ZipFile(BytesIO(xlsx)).read("xl/worksheets/sheet1.xml").decode("utf-8")
+    assert "촬영 일시" in sheet and "사진 수" in sheet and "2026-11-06 14:03" in sheet

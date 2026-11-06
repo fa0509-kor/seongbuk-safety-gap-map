@@ -69,6 +69,23 @@ class Report(Base):
     photo: Mapped[Photo | None] = relationship(foreign_keys=[photo_key])
     history: Mapped[list[StatusHistory]] = relationship(
         back_populates="report", order_by="StatusHistory.created_at", cascade="all, delete-orphan")
+    photos: Mapped[list[ReportPhoto]] = relationship(
+        back_populates="report", order_by="ReportPhoto.position", cascade="all, delete-orphan")
+
+
+class ReportPhoto(Base):
+    """제보에 붙은 사진(최대 4장)과 사진별 메모·촬영 일시. position 0이 대표 사진(reports.photo_key와 같음).
+    이 표가 없던 때의 제보는 행이 없고, 그때는 reports.photo_key 한 장만 있는 것으로 본다."""
+    __tablename__ = "report_photos"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    report_id: Mapped[int] = mapped_column(ForeignKey("reports.id"), index=True)
+    position: Mapped[int] = mapped_column(Integer, default=0)
+    photo_key: Mapped[str] = mapped_column(ForeignKey("photos.key"))
+    memo: Mapped[str | None] = mapped_column(String(200))             # 사진별 메모
+    taken_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # 사진 촬영 일시 (사진 속 위치 정보는 지우지만 일시는 남김)
+
+    report: Mapped[Report] = relationship(back_populates="photos")
 
 
 class StatusHistory(Base):

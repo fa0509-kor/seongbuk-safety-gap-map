@@ -43,6 +43,19 @@
 
 우선순위 점수·기한은 DB에 저장하지 않고 응답할 때 계산한다 (`backend/app/scoring.py`). 값을 바꾸면 바로 반영됨.
 
+## report_photos — 제보에 붙은 사진 (최대 4장)
+
+| 열 | 종류 | 설명 |
+| --- | --- | --- |
+| id | 정수 | 기본 키 |
+| report_id | → reports.id | 어느 제보의 사진인지 |
+| position | 정수 | 0이 대표 사진 (reports.photo_key와 같음), 1~3이 추가 사진 |
+| photo_key | → photos.key | 사진 |
+| memo | 문자 200 | 사진별 메모 |
+| taken_at | 시각 | 촬영 일시 (브라우저가 EXIF에서 읽어 보냄, 없으면 파일 수정 시각) |
+
+새 표라서 서버가 켜질 때 `create_all`이 자동으로 만든다 (배포 DB에 SQL을 따로 실행할 필요 없음). 이 표가 생기기 전의 제보는 행이 없고, 그때는 `reports.photo_key` 한 장만 있는 것으로 본다.
+
 ## status_history — 처리 이력
 | 열 | 형식 | 설명 |
 | --- | --- | --- |

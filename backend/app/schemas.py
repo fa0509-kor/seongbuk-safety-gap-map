@@ -31,14 +31,23 @@ class PhotoOut(BaseModel):
     ai_provider: str | None = None
 
 
+class PhotoIn(BaseModel):
+    photo_key: str = Field(description="POST /api/photos?classify=false 응답의 key")
+    memo: str | None = Field(None, max_length=200, description="사진별 메모")
+    taken_at: datetime | None = Field(None, description="촬영 일시")
+
+
 class ReportCreate(BaseModel):
-    photo_key: str = Field(description="POST /api/photos 응답의 key")
+    photo_key: str = Field(description="POST /api/photos 응답의 key (대표 사진, AI 분류 대상)")
     lat: float | None = None
     lon: float | None = None
     address: str | None = Field(None, max_length=200)
     memo: str | None = Field(None, max_length=200)
     is_demo: bool = False
     facility_type: str | None = Field(None, description="시설 종류 코드 (GET /api/meta 의 facility_types). 없으면 unknown")
+    taken_at: datetime | None = Field(None, description="대표 사진 촬영 일시")
+    photo_memo: str | None = Field(None, max_length=200, description="대표 사진 메모")
+    extra_photos: list[PhotoIn] = Field(default_factory=list, max_length=3, description="대표 사진 말고 더 붙이는 사진 (최대 3장)")
 
 
 class AdminReportCreate(ReportCreate):
@@ -52,6 +61,13 @@ class HistoryOut(BaseModel):
     to_status_label: str
     note: str | None = None
     photo_url: str | None = None
+
+
+class ReportPhotoOut(BaseModel):
+    position: int
+    photo_url: str | None
+    memo: str | None = None
+    taken_at: datetime | None = None
 
 
 class ReportOut(BaseModel):
@@ -74,6 +90,7 @@ class ReportOut(BaseModel):
     dept_note: str | None
     confirm_count: int = Field(0, description="같은 곳 확인(나도 봤어요) 인원")
     cross_checked: bool = Field(False, description="확인 인원이 CROSS_CHECK_MIN(3명) 이상이면 true. 로그인이 없어 브라우저 기준")
+    photos: list[ReportPhotoOut] = Field(default_factory=list, description="붙은 사진 전체(대표 사진 포함, 최대 4장). 사진별 메모·촬영 일시")
     not_target: bool = Field(False, description="담당자가 '처리 대상 아님'(AI 오탐 표시)으로 닫았으면 true. 이유는 dept_note에 적는다")
     history: list[HistoryOut]
 

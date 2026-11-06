@@ -63,11 +63,13 @@
 ## 주민 제보
 | 메서드 | 주소 | 설명 |
 | --- | --- | --- |
-| POST | `/api/reports` | 제보 보내기. 본문 `{photo_key, lat?, lon?, address?, memo?(200자), is_demo?, facility_type?}`. 시설 종류로 담당 부서 1차 배정 (`docs/departments.md`) |
+| POST | `/api/reports` | 제보 보내기. 본문 `{photo_key, lat?, lon?, address?, memo?(200자), is_demo?, facility_type?, taken_at?, photo_memo?(200자), extra_photos?[{photo_key, memo?, taken_at?}](최대 3장)}`. `photo_key`는 대표 사진(AI 분류 대상), 추가 사진은 `POST /api/photos?classify=false`로 올린 key. 시설 종류로 담당 부서 1차 배정 (`docs/departments.md`) |
 | POST | `/api/reports/{public_id}/confirm` | 나도 봤어요(+1). `confirm_count` +1 → 우선순위 1명당 +5(최대 +20). 응답에 `cross_checked`(3명 이상이면 true, `constants.CROSS_CHECK_MIN`). 로그인이 없어 중복 방지는 브라우저에서만 → 한 사람이 여러 브라우저로 누르면 늘 수 있음 |
 | GET | `/api/reports?ids=a,b,c` | 내 제보 목록 (최대 50개). `ids`는 브라우저에 저장한 `public_id` |
 | GET | `/api/reports/nearby?lat&lon&category?&radius_m=50` | 같은 곳(기본 50m, 최대 200m)에 이미 접수된 주민 제보 요약. 제보 화면에서 중복 제보를 줄이려고 씀. 체험·오탐·공백 항목 제외, `category`를 주면 AI 분류가 같은 것만, 가까운 순 최대 5건. `{public_id, category, status, status_label, created_at, distance_m, confirm_count, dept, facility_label}` (사진·메모 없음) |
 | GET | `/api/reports/{public_id}` | 제보 1건 |
+
+`ReportOut.photos` = 붙은 사진 전체(대표 포함, 최대 4장) `[{position, photo_url, memo, taken_at}]`. 사진 표가 생기기 전의 제보는 대표 사진 한 장(`taken_at` 없음)으로 나온다. 촬영 일시는 사진 속 위치 정보(EXIF GPS)와 달리 남긴다. 점검 대장 엑셀에 `촬영 일시`, `사진 수` 열이 추가됨.
 
 `ReportOut.not_target` = 담당자가 '처리 대상 아님'(AI 오탐 표시)으로 닫은 제보. 이유는 `dept_note`에 적는다. 주민 '내 제보'에서 "처리 대상 아님"과 이유로 보인다.
 

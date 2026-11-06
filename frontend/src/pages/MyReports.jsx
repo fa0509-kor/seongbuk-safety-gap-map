@@ -2,6 +2,7 @@ import Brand from '../components/Brand.jsx'
 import { useEffect, useRef, useState } from 'react'
 import StatusSteps from '../components/StatusSteps.jsx'
 import { api } from '../lib/api.js'
+import { formatTaken } from '../lib/exif.js'
 import { myReports } from '../lib/myReports.js'
 
 // 주민 4 내 제보: 상태 진행, 제보 사진과 조치 후 사진, 담당 부서 메모.
@@ -68,7 +69,12 @@ export default function MyReports() {
             ? <p className="rounded-lg bg-page px-3 py-2.5 text-[13px] leading-normal">담당자가 확인한 결과, 처리 대상이 아니라고 판단했습니다.{r.dept_note ? ` 이유: ${r.dept_note}` : ' 이유는 담당 부서에 문의해 주세요.'}</p>
             : <><StatusSteps status={r.status} /><p className="text-[13px] font-medium text-brand">{progress(r)}</p></>}
           <div className="grid grid-cols-2 gap-2">
-            {r.photo_url && <figure className="flex flex-col gap-1"><img src={r.photo_url} alt="제보 사진" className="h-24 w-full rounded-lg object-cover" /><figcaption className="text-xs text-sub">제보 사진</figcaption></figure>}
+            {(r.photos?.length ? r.photos : [{ photo_url: r.photo_url }]).filter((p) => p.photo_url).map((p, i) => (
+              <figure key={p.photo_url} className="flex flex-col gap-1">
+                <img src={p.photo_url} alt={i === 0 ? '제보 사진' : `제보 사진 ${i + 1}`} className="h-24 w-full rounded-lg object-cover" />
+                <figcaption className="text-xs leading-snug text-sub">{i === 0 ? '제보 사진' : `사진 ${i + 1}`}{p.taken_at && ` · 촬영 ${formatTaken(p.taken_at)}`}{p.memo && <span className="block text-ink">{p.memo}</span>}</figcaption>
+              </figure>
+            ))}
             {r.after_photo_url && <figure className="flex flex-col gap-1"><img src={r.after_photo_url} alt="조치 후 사진" className="h-24 w-full rounded-lg object-cover" /><figcaption className="text-xs text-sub">조치 후 사진</figcaption></figure>}
           </div>
           {r.dept && <p className="text-xs text-sub">담당: {r.dept}</p>}
