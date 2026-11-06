@@ -43,13 +43,8 @@ export const myReports = {
     return k
   },
   nickname: () => read(NICK, ''),
-  setNickname: (v) => write(NICK, String(v).trim().slice(0, 20)), // 브라우저에 저장돼 앱을 껐다 켜도 유지(브라우저 데이터를 지우면 사라짐)
+  setNickname: (v) => { if (!read(NICK, '')) write(NICK, String(v).trim().slice(0, 20)) }, // 한 번 정하면 바꿀 수 없다. 브라우저에 저장돼 앱을 껐다 켜도 유지(브라우저 데이터를 지우면 사라짐)
   clientCode: () => myReports.clientKey().slice(0, 8), // 본인과 담당자가 서로 맞춰 볼 수 있는 앞 8자리
-  resetClientKey: () => { // 새 식별번호로 바꾼다 (이후 제보부터 새 번호로 저장됨)
-    memoryKey = null
-    try { localStorage.removeItem(CLIENT) } catch { /* 무시 */ }
-    return myReports.clientKey().slice(0, 8)
-  },
   vote: (publicId) => read(VOTES, {})[publicId] ?? null,
   setVote: (publicId, kind) => write(VOTES, { ...read(VOTES, {}), [publicId]: kind }),
   ids: () => read(IDS, []),
