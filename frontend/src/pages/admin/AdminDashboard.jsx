@@ -14,18 +14,21 @@ function Screening({ s }) {
   if (!s || !s.facilities_total) return null
   const pct = s.targets ? Math.round((s.targets_done / s.targets) * 100) : 0
   return (
-    <div className="rounded-lg bg-white p-4 shadow-sm">
-      <div className="text-sm text-gray-500">데이터 사전 점검 · 현장에 가기 전에 공공데이터로 먼저 걸러낸 곳</div>
-      <div className="mt-1 flex flex-wrap items-baseline gap-x-3">
-        <Link to="/admin/reports?source=gap" className="text-2xl font-semibold">{s.targets}곳</Link>
-        <span className="text-gray-500">/ 안전시설 {s.facilities_total.toLocaleString()}곳 ({s.ratio_pct}%)</span>
-        <span className="ml-auto text-sm">확인 완료 {s.targets_done}곳 · {pct}%</span>
+    <div className="admin-card screening-card">
+      <div className="screening-main">
+        <div className="card-title"><h2>공공데이터 사전 점검</h2><span className="chip chip-lime">현장 확인 필요</span></div>
+        <div className="mt-3 flex flex-wrap items-baseline gap-x-3">
+          <Link to="/admin/reports?source=gap" className="big-number">{s.targets}곳</Link>
+          <span className="text-sub text-[13px]">/ 전체 안전시설 {s.facilities_total.toLocaleString()}곳 중 {s.ratio_pct}%</span>
+        </div>
+        <div className="mt-4 flex items-center justify-between text-[13px]"><b>현장 확인 완료 {s.targets_done}곳</b><span>{pct}%</span></div>
+        <div className="mt-2 h-2 rounded-full bg-[#eef0e6]"><div className="h-2 rounded-full bg-brand" style={{ width: `${pct}%` }} /></div>
+        <p className="mt-3 text-xs text-sub">공공데이터로 선별한 의심 대상입니다. 실제 위험 여부는 현장에서 확인하세요.</p>
       </div>
-      <div className="mt-2 h-2 rounded bg-gray-100"><div className="h-2 rounded bg-brand" style={{ width: `${pct}%` }} /></div>
-      <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-600">
-        {Object.entries(s.by_rule).map(([k, v]) => <span key={k} className="rounded bg-gray-100 px-2 py-0.5">{k} {v}</span>)}
+      <div className="screening-types">
+        <h3>유형별 점검 대상</h3>
+        <ul>{Object.entries(s.by_rule).map(([k, v]) => <li key={k}><span>{k}</span><b>{v}곳</b></li>)}</ul>
       </div>
-      <p className="mt-2 text-xs text-gray-400">나머지 시설이 안전하다는 뜻은 아닙니다. 규칙에 걸린 곳부터 확인합니다.</p>
     </div>
   )
 }
@@ -48,40 +51,60 @@ export default function AdminDashboard() {
   }, [])
 
   const cards = [
-    ['오늘 신규', summary?.today_new],
-    ['기한 초과 (조치 미시작)', summary?.overdue_open],
-    ['이번 달 조치 완료', summary?.done_this_month],
-    ['평균 처리 기간', summary ? (summary.avg_days_to_done == null ? '완료 건 없음' : `${summary.avg_days_to_done}일`) : undefined],
-    ['기한 내 조치 시작률', onTime(summary?.on_time)],
+    ['오늘 신규', summary?.today_new, '오늘 접수된 점검 대상'],
+    ['기한 초과 미조치', summary?.overdue_open, '처리 기한을 넘긴 대상'],
+    ['이번 달 조치 완료', summary?.done_this_month, '이번 달 처리한 점검 대상'],
+    ['평균 처리 기간', summary ? (summary.avg_days_to_done == null ? '완료 건 없음' : `${summary.avg_days_to_done}일`) : undefined, '접수부터 조치 완료까지'],
   ]
   const ac = summary?.aftercare
+  const rate = onTime(summary?.on_time)
 
   return (
-    <section className="dashboard-page flex flex-col gap-6">
-      <div><p className="eyebrow">SEONGBUK SAFETY MAP</p><h1 className="text-2xl font-bold">우리 동네 안전 현황</h1><p className="mt-2 text-sm text-sub">주민 제보와 데이터 점검 대상을 한곳에서 확인하세요.</p></div>
+    <section className="dashboard-page flex flex-col gap-5">
+      <div className="page-head">
+        <div><h1>안전 점검 대시보드</h1><p>성북구의 안전 공백을 확인하고, 우선순위에 따라 현장 점검을 진행하세요.</p></div>
+        <Link to="/admin/report" className="btn-light"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M4 20h16" /></svg>보고서 다운로드</Link>
+      </div>
       {newCount > 0 && (
-        <div className="rounded bg-amber-50 p-3 text-sm">접수 대기 제보 {newCount}건 · <Link to="/admin/reports?status=received" className="underline">확인하기</Link></div>
+        <div className="admin-notice">접수 대기 제보 {newCount}건 · <Link to="/admin/reports?status=received" className="underline">확인하기</Link></div>
       )}
       {ac && (ac.reopened + ac.recurred + ac.recheck_due > 0) && (
-        <div className="rounded bg-amber-50 p-3 text-sm">조치 후 관리 · 아직 그대로라는 의견 {ac.reopened}건 · 재발 {ac.recurred}건 · 재점검 필요 {ac.recheck_due}건</div>
+        <div className="admin-notice">조치 후 관리 · 아직 그대로라는 의견 {ac.reopened}건 · 재발 {ac.recurred}건 · 재점검 필요 {ac.recheck_due}건</div>
       )}
       <RewardRequests />
-      <Screening s={summary?.screening} />
-      <div className="dashboard-stats grid grid-cols-5 gap-3">
-        {cards.map(([k, v]) => (
-          <div key={k} className="rounded-lg bg-white p-4 shadow-sm"><div className="break-keep text-sm text-gray-500">{k}</div><div className="break-keep text-2xl font-semibold">{v ?? '—'}</div></div>
+      <div className="dashboard-stats grid grid-cols-4 gap-4">
+        {cards.map(([k, v, sub]) => (
+          <div key={k} className="admin-card kpi"><span className="kpi-label">{k}</span><b className="kpi-value">{v ?? '—'}</b><span className="kpi-sub">{sub}</span></div>
         ))}
       </div>
-      <div>
-        <h2 className="mb-2 font-semibold">우선순위 상위 (접수 상태, 규칙 점수순)</h2>
-        <ul className="divide-y rounded-lg bg-white">
-          {top.map((r) => (
-            <li key={r.id} className="flex justify-between p-3">
-              <Link to={`/admin/reports/${r.id}`}>#{r.id} {r.gap_rule ?? r.ai?.category ?? '-'} · {r.source_label}</Link>
-              <span className={r.priority.overdue ? 'font-semibold text-danger' : ''}>{r.priority.total}점{r.priority.overdue && ' · 기한 초과'}</span>
-            </li>
-          ))}
-        </ul>
+      <Screening s={summary?.screening} />
+      <div className="dashboard-bottom grid grid-cols-[1fr_320px] gap-4">
+        <div className="admin-card">
+          <div className="card-title"><h2>우선 점검 대상 <small>상위 {top.length}건</small></h2><Link to="/admin/reports" className="btn-light btn-sm">전체 목록 보기</Link></div>
+          <table className="admin-plain-table mt-3 w-full text-sm">
+            <thead><tr><th>번호</th><th>점검 내용</th><th>우선순위</th><th>처리 상태</th><th>상세 보기</th></tr></thead>
+            <tbody>
+              {top.map((r) => (
+                <tr key={r.id}>
+                  <td data-label="번호">#{r.id}</td>
+                  <td data-label="점검 내용"><b>{r.gap_rule ?? r.ai?.category ?? '-'}</b><span className="block text-xs text-sub">{r.source_label}</span></td>
+                  <td data-label="우선순위" className={r.priority.overdue ? 'font-semibold text-danger' : ''}>{r.priority.total}점{r.priority.overdue && ' · 기한 초과'}</td>
+                  <td data-label="처리 상태"><span className="chip chip-lime">{r.status_label}</span></td>
+                  <td data-label="상세 보기"><Link to={`/admin/reports/${r.id}`}>상세 보기 →</Link></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!top.length && <p className="mt-3 text-sm text-sub">접수 상태의 항목이 없습니다.</p>}
+          <p className="mt-3 text-xs text-sub">접수 상태 · 규칙 점수순으로 정렬된 목록입니다.{rate && ` 기한 내 조치 시작률 ${rate}.`}</p>
+        </div>
+        <aside className="admin-cta">
+          <span className="cta-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4" /></svg></span>
+          <h2>데이터 확인에서<br />현장 안전까지</h2>
+          <p>공공데이터 분석 결과를 바탕으로 확인이 필요한 곳부터 점검하세요.</p>
+          <ol><li><b>01</b>점검 대상과 위치 확인</li><li><b>02</b>현장 확인 후 상태 변경</li><li><b>03</b>조치 내용 기록 및 보고</li></ol>
+          <Link to="/admin/integrated" className="cta-button">통합 점검 후보 확인 →</Link>
+        </aside>
       </div>
     </section>
   )

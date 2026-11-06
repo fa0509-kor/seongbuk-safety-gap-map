@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import AIResultCard from '../../components/AIResultCard.jsx'
 import AftercarePanel from '../../components/AftercarePanel.jsx'
 import PhotoModal from '../../components/PhotoModal.jsx'
@@ -40,7 +40,7 @@ export default function AdminDetail() {
   if (!r) return <p>{msg || '불러오는 중…'}</p>
   return (
     <section className="flex flex-col gap-4">
-      <h1 className="text-xl font-bold">#{r.id} · {r.source_label} · {r.status_label}</h1>
+      <div className="page-head"><div><h1>점검 대상 상세</h1><p>#{r.id} · {r.gap_rule ?? r.ai?.category ?? '-'} · {r.source_label} · 처리 상태 {r.status_label}</p></div></div>
       <div className="detail-grid grid grid-cols-3 gap-4">
         <div className="rounded-lg bg-white p-4">
           <h2 className="mb-2 font-semibold">AI가 본 것</h2>
@@ -121,6 +121,7 @@ export default function AdminDetail() {
           ))}
         </ol>
       </div>
+      <Link to="/admin/reports" className="btn-dark detail-back">목록으로 돌아가기</Link>
       <PhotoModal src={viewer?.src} title={viewer?.title} onClose={() => setViewer(null)} />
     </section>
   )
