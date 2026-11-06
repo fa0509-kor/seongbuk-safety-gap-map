@@ -1,12 +1,10 @@
-import Brand from '../components/Brand.jsx'
+import ResidentHeader from '../components/ResidentHeader.jsx'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import AIResultCard from '../components/AIResultCard.jsx'
 import NearbyReports from '../components/NearbyReports.jsx'
 import PhotoGuide from '../components/PhotoGuide.jsx'
-import PhotoStrip from '../components/PhotoStrip.jsx'
 import PinPicker from '../components/PinPicker.jsx'
-import StepBar from '../components/StepBar.jsx'
 import { takenAt } from '../lib/exif.js'
 import { api } from '../lib/api.js'
 import { currentPosition, resizeImage } from '../lib/image.js'
@@ -33,6 +31,8 @@ export default function Report() {
   const [params] = useSearchParams()
   const isDemo = params.get('demo') === '1'
   const navigate = useNavigate()
+  const [index, setIndex] = useState(null)
+  const [editingLocation, setEditingLocation] = useState(false)
   const [photos, setPhotos] = useState([])   // [{key, preview, memo, takenAt, ai}] 최대 4장, 0번이 대표
   const [pos, setPos] = useState(null)       // 제보에 쓸 위치 (핀으로 바꿀 수 있음)
   const [locState, setLocState] = useState('finding') // finding / auto / manual / failed
@@ -48,6 +48,7 @@ export default function Report() {
 
   // 임시저장 불러오기: 올려 둔 사진(서버에 있음)과 메모, 시설 종류
   useEffect(() => {
+    if (isDemo) return
     const d = myReports.draft()
     if (d?.photos?.length) {
       setPhotos(d.photos.map((p) => ({ ...p, preview: photoSrc(p.key) })))
@@ -65,7 +66,10 @@ export default function Report() {
 
   useEffect(() => {
     currentPosition().then((p) => {
-      if (p) { setPos(p); setLocState('auto') } else setLocState('failed')
+      if (p) {
+        setPos((current) => current ?? p)
+        setLocState((state) => state === 'manual' ? state : 'auto')
+      } else setLocState((state) => state === 'manual' ? state : 'failed')
     })
     api.meta().then((m) => setFacilityTypes(m.facility_types)).catch(() => {})
   }, [])
@@ -76,6 +80,7 @@ export default function Report() {
     const list = [...files].slice(0, MAX_PHOTOS - photos.length)
     if (!list.length) return setError(`사진은 최대 ${MAX_PHOTOS}장까지 붙일 수 있어요.`)
     setError(''); setLastFiles(list); setUploading(true)
+    let uploaded = 0
     try {
       for (const file of list) {
         const taken = await takenAt(file)
@@ -85,9 +90,10 @@ export default function Report() {
         const draft = aiDraft(up.ai)
         if (draft) setAiDrafted(true)
         setPhotos((l) => (l.length >= MAX_PHOTOS ? l : [...l, { key: up.key, preview: URL.createObjectURL(blob), memo: draft, takenAt: taken, ai: up.ai, quality }]))
+        uploaded += 1
       }
       setLastFiles(null)
-    } catch (e) { setError(`사진 처리 실패: ${e.message}`) } finally { setUploading(false) }
+    } catch (e) { setLastFiles(list.slice(uploaded)); setError(`사진 처리 실패: ${e.message}`) } finally { setUploading(false) }
   }
   const setMemo = (i, v) => setPhotos((l) => l.map((p, k) => (k === i ? { ...p, memo: v } : p)))
   const removePhoto = (i) => setPhotos((l) => l.filter((_, k) => k !== i))                    // 대표를 지우면 다음 사진이 대표가 됨
@@ -110,7 +116,7 @@ export default function Report() {
         taken_at: main.takenAt, photo_memo: main.memo || null,
         extra_photos: rest.map((x) => ({ photo_key: x.key, memo: x.memo || null, taken_at: x.takenAt })),
       })
-      myReports.clearDraft()
+      if (!isDemo) myReports.clearDraft()
       myReports.add(r.public_id)
       myReports.markSeen() // 방금 보낸 제보는 '새 소식'이 아님 → 빨간 점은 담당자가 처리할 때부터
       navigate('/my')
@@ -124,90 +130,120 @@ export default function Report() {
     failed: '위치를 못 가져왔어요 (https 주소에서만 동작). 지도를 눌러 위치를 지정해 주세요.',
   }[locState]
 
-  const main = photos[0]
-  const steps = [['사진', photos.length > 0], ['위치', !!pos], ['확인', !!main?.ai]]
+  const photo = index === null ? null : photos[index]
+  const locked = busy || uploading
+  const go = (next) => {
+    setEditingLocation(false)
+    setIndex(next)
+  }
+  const choose = (e) => {
+    if (e.target.files.length) addFiles(e.target.files)
+    e.target.value = ''
+  }
   return (
-    <section className="flex min-h-full flex-col gap-3 bg-page px-5 pb-6 pt-6 text-ink report-page">
-      <header className="resident-header"><div className="flex items-center gap-1"><Link to="/" aria-label="뒤로" className="flex h-11 w-8 shrink-0 items-center">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
-        </Link><Brand /></div><h1>제보하기{isDemo && <span className="ml-1 text-sm text-amber-600">(체험)</span>}</h1></header>
-      <StepBar steps={steps} />
-      {draftBack && photos.length > 0 && <p className="rounded-lg bg-white px-3 py-2 text-[13px] text-sub">쓰던 제보를 불러왔어요. 올려 둔 사진과 메모가 그대로 있어요.</p>}
-      <p className="text-[13px] text-sub">얼굴·차량 번호판이 나오지 않게, 길에서만 찍어 주세요. 사진 속 위치 정보(EXIF)는 지우고 저장합니다.</p>
-
-      <div>
-        <p className="mb-1.5 text-sm font-semibold">이런 걸 찍어 주세요</p>
-        <div className="grid grid-cols-2 gap-2">
-          {EXAMPLES.map(([title, desc]) => (
-            <div key={title} className="rounded-xl border border-line bg-white px-3 py-2.5">
-              <div className="text-sm font-semibold">{title}</div>
-              <div className="mt-0.5 text-[13px] leading-snug text-sub">{desc}</div>
-            </div>
-          ))}
+    <section className="resident-screen min-h-full">
+      <ResidentHeader caption={photo ? '‹ 제보하기 / 2단계' : '‹ 제보하기 / 1단계'}
+        title={photo ? `사진 ${index + 1} 확인하기` : '사진으로 제보하기'} />
+      {photo ? <>
+        <div className="resident-card grid gap-2">
+          <div className="flex items-center justify-between text-sm font-bold">
+            사진 {index + 1} / {photos.length}
+            {index === 0 && <span className="resident-chip bg-[#ebefcb]">대표 사진</span>}
+          </div>
+          <img src={photo.preview} alt="선택한 제보 사진" className="h-[102px] w-full rounded-xl object-cover" />
         </div>
+        <div className="resident-card grid gap-2">
+          <div className="flex items-center justify-between text-sm font-bold">위치
+            <button type="button" disabled={locked} className="resident-chip bg-[#ebefcb]"
+              onClick={() => setEditingLocation(!editingLocation)}>{editingLocation ? '위치 확인' : '위치 수정'}</button>
+          </div>
+          {editingLocation
+            ? <PinPicker key="edit" value={pos} onChange={(p) => { setPos(p); setLocState('manual') }} />
+            : pos && <PinPicker key="preview" value={pos} readOnly />}
+          <p className="text-xs text-sub">{pos ? `${pos.lat.toFixed(5)}, ${pos.lon.toFixed(5)} · 제보 공통 위치` : locText}</p>
+        </div>
+        <fieldset disabled={locked} className="resident-card grid gap-2">
+          <legend className="sr-only">시설 종류</legend>
+          <h2 className="text-sm font-bold">시설 종류</h2>
+          <p className="text-xs text-sub">대표 사진 속 시설을 하나 골라 주세요.</p>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(facilityTypes).map(([code, label]) => (
+              <button key={code} type="button" aria-pressed={facility === code} onClick={() => setFacility(code)}
+                className={`rounded-xl border px-2.5 py-2 text-xs ${facility === code ? 'border-brand bg-brand font-bold text-white' : 'border-line bg-page'}`}>
+                {facility === code && '✓ '}{label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+        {photo.ai && <div className="resident-ai"><AIResultCard ai={photo.ai} highlight /></div>}
+        <div className="resident-card grid gap-2">
+          <label className="grid gap-2 text-sm font-bold">자세한 설명
+            <textarea className="min-h-16 rounded-2xl bg-page p-3 text-sm font-normal" maxLength={200}
+              value={photo.memo} disabled={locked} onChange={(e) => setMemo(index, e.target.value)} />
+          </label>
+          <p className="text-xs text-sub">{aiDrafted ? 'AI 초안을 확인하고 실제 상황에 맞게 고쳐 주세요.' : '실제 상황을 자세히 적어 주세요.'}</p>
+        </div>
+        {index === photos.length - 1 && <>
+          <NearbyReports pos={pos} accuracy={pos?.accuracy} category={photos[0].ai && !photos[0].ai.mock ? photos[0].ai.category : null} />
+          <p className="text-xs text-sub">제보와 함께 이 브라우저의 식별번호 {myReports.clientCode()}{myReports.nickname() && ` · 별명 ${myReports.nickname()}`}가 저장돼요.</p>
+        </>}
+      </> : <>
+        <div className="rounded-[20px] bg-[#ebefcb] p-3.5">
+          <h2 className="text-lg font-bold">이런 걸 찍어 주세요</h2>
+          <p className="my-2 text-sm text-sub">위험한 곳과 주변이 잘 보이도록<br />안전한 거리에서 촬영해 주세요.</p>
+          <div className="grid grid-cols-2 gap-2">
+            {EXAMPLES.map(([title, desc]) => <div key={title} className="rounded-xl bg-white p-2.5">
+              <h3 className="text-[13px] font-bold">{title}</h3><p className="text-xs text-sub">{desc}</p>
+            </div>)}
+          </div>
+        </div>
+        <PhotoGuide />
+        <div className="resident-card grid gap-2">
+          <h2 className="text-lg font-bold">사진 추가</h2>
+          <p className="text-sm text-sub">여러 장을 한 번에 고를 수 있어요. 최대 {MAX_PHOTOS}장</p>
+          {isDemo ? <button type="button" onClick={useDemoPhoto} disabled={locked || photos.length > 0} className="resident-primary">체험용 사진 불러오기</button>
+            : <div className="grid grid-cols-2 gap-2">
+              <label className="resident-primary grid cursor-pointer place-items-center text-center text-sm focus-within:outline">사진 찍기
+                <input type="file" accept="image/*" capture="environment" disabled={locked || photos.length >= MAX_PHOTOS} onChange={choose} className="sr-only" />
+              </label>
+              <label className="resident-primary grid cursor-pointer place-items-center text-center text-sm focus-within:outline">앨범에서 고르기
+                <input type="file" accept="image/*" multiple disabled={locked || photos.length >= MAX_PHOTOS} onChange={choose} className="sr-only" />
+              </label>
+            </div>}
+          <p className="text-xs text-sub">얼굴이나 차량 번호판이 나오지 않도록 찍어 주세요.</p>
+        </div>
+        {photos.length > 0 && <div className="resident-card grid gap-2">
+          <h2 className="font-bold">선택한 사진 {photos.length}장</h2>
+          {draftBack && <p className="text-xs text-sub">쓰던 제보를 불러왔어요.</p>}
+          <div className="grid grid-cols-2 gap-2.5">
+            {photos.map((item, i) => <div key={item.key} className="relative">
+              <img src={item.preview} alt={`선택한 사진 ${i + 1}`} className="h-[102px] w-full rounded-xl object-cover" />
+              <button type="button" disabled={locked} aria-label={`${i + 1}번 사진 삭제`} onClick={() => removePhoto(i)}
+                className="absolute right-1 top-1 grid size-8 place-items-center rounded-full bg-white text-lg">×</button>
+              {i === 0 ? <p className="text-xs font-bold">대표 사진</p> :
+                <button type="button" disabled={locked} className="text-xs underline" onClick={() => makeMain(i)}>대표로 지정</button>}
+            </div>)}
+          </div>
+          <p className="text-xs text-sub">다음 단계에서 사진마다 위치와 설명을 확인해요.</p>
+        </div>}
+        {isDemo && <Link to="/report" className="text-center text-xs underline">일반 제보로 돌아가기</Link>}
+      </>}
+      {uploading && <p role="status" className="text-sm text-sub">AI가 사진을 보고 있어요. 잠시 기다려 주세요.</p>}
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+      {!locked && lastFiles && <button type="button" onClick={() => addFiles(lastFiles)} className="rounded-xl border border-line py-2 text-sm">실패한 사진 다시 시도</button>}
+      <div className="mt-auto grid gap-2 pt-2">
+        {photo ? <>
+          <p className="text-center text-xs font-semibold text-sub">{index + 1} / {photos.length}</p>
+          <div className="grid grid-cols-[1fr_2fr] gap-2">
+            <button type="button" disabled={locked} onClick={() => go(index === 0 ? null : index - 1)} className="rounded-xl border border-line bg-white text-sm font-bold">{index === 0 ? '사진 목록' : '이전 사진'}</button>
+            {index < photos.length - 1
+              ? <button type="button" disabled={locked} onClick={() => go(index + 1)} className="resident-primary">다음 사진</button>
+              : <button type="button" disabled={locked} onClick={submit} className="resident-primary">{busy ? '보내는 중…' : `제보 보내기 · ${photos.length}장`}</button>}
+          </div>
+        </> : <button type="button" disabled={locked || !photos.length} onClick={() => go(0)} className="resident-primary">
+          {photos.length ? `사진 ${photos.length}장 확인하기` : '사진 확인하기'}
+        </button>}
       </div>
-
-      <PhotoGuide />
-
-      {main ? (
-        <div className="relative overflow-hidden rounded-2xl bg-gray-300">
-          <img src={main.preview} alt="대표 사진" className="block max-h-[320px] w-full object-cover" />
-          <span className="absolute left-2 top-2 rounded bg-ink px-2 py-0.5 text-xs font-semibold text-white">대표 사진</span>
-        </div>
-      ) : (
-        <div className="flex min-h-[150px] flex-col items-center justify-center gap-2 rounded-2xl bg-gray-300 p-3">
-          {isDemo
-            ? <button type="button" onClick={useDemoPhoto} className="rounded-lg bg-white/90 px-4 py-2 text-sm font-medium">체험용 사진 불러오기</button>
-            : (
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                <label className="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-white/90 px-4 text-sm font-semibold">
-                  카메라로 찍기
-                  <input type="file" accept="image/*" capture="environment" className="hidden" disabled={uploading}
-                    onChange={(e) => { if (e.target.files.length) addFiles(e.target.files); e.target.value = '' }} />
-                </label>
-                <label className="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-white/90 px-4 text-sm font-semibold">
-                  앨범에서 고르기 (여러 장 가능)
-                  <input type="file" accept="image/*" multiple className="hidden" disabled={uploading}
-                    onChange={(e) => { if (e.target.files.length) addFiles(e.target.files); e.target.value = '' }} />
-                </label>
-              </div>
-            )}
-        </div>
-      )}
-      {uploading && <p className="text-[13px] text-sub">AI가 사진을 보고 있어요. 보통 5초쯤 걸리고, 처음에는 10초 넘게 걸릴 수 있어요. 이 화면을 닫지 말고 기다려 주세요.</p>}
-      {error && !uploading && lastFiles && (
-        <button type="button" onClick={() => addFiles(lastFiles)} className="h-11 rounded-xl border border-brand text-sm font-semibold text-brand">다시 시도</button>
-      )}
-
-      <div className="flex flex-col gap-2 rounded-xl border border-line bg-white p-3">
-        <div className="flex items-center gap-2.5 text-sm">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#001A47" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.5" /></svg>
-          <span className="flex-1">{locText}</span>
-        </div>
-        <PinPicker value={pos} onChange={(p) => { setPos(p); setLocState('manual') }} />
-        {pos && <p className="text-[13px] text-sub">{pos.lat.toFixed(5)}, {pos.lon.toFixed(5)} · 핀을 끌어 옮길 수 있어요</p>}
-      </div>
-
-      {photos.length > 0 && <PhotoStrip items={photos} onMemo={setMemo} onRemove={removePhoto} onMakeMain={makeMain} onAdd={addFiles} adding={uploading} max={MAX_PHOTOS} aiDrafted={aiDrafted} />}
-      {main?.ai && <AIResultCard ai={main.ai} highlight />}
-      {main && <NearbyReports pos={pos} accuracy={pos?.accuracy} category={main.ai && !main.ai.mock ? main.ai.category : null} />}
-
-      <div>
-        <p className="mb-1.5 text-sm text-sub">어떤 시설인가요? (담당 부서를 정하는 데 씁니다)</p>
-        <div className="flex flex-wrap gap-2">
-          {Object.entries(facilityTypes).map(([code, label]) => (
-            <button key={code} type="button" onClick={() => setFacility(code)}
-              className={`h-11 rounded-full border px-3.5 text-sm ${facility === code ? 'border-brand bg-brand text-white' : 'border-line bg-white'}`}>
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <p className="text-[13px] text-sub">제보와 함께 이 브라우저의 식별번호 {myReports.clientCode()}{myReports.nickname() && ` · 별명 ${myReports.nickname()}`}가 저장돼요. 이름·연락처가 아니고, 내 제보 화면에서 확인할 수 있어요.</p>
-      {error && <p className="text-sm text-danger">{error}</p>}
-      <button type="button" disabled={!main || busy || uploading} onClick={submit}
-        className="h-[52px] rounded-2xl bg-brand text-base font-semibold text-white disabled:opacity-40">제보 보내기</button>
     </section>
   )
 }

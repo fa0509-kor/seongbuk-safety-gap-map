@@ -1,3 +1,4 @@
+import ResidentHeader, { residentAsset } from '../components/ResidentHeader.jsx'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -9,7 +10,7 @@ import { myReports } from '../lib/myReports.js'
 // 주민 3 지도. 필터: 전체 / 주민 제보 / 조치 완료. 소방용수 '점검 필요' 점은 주민이 신경 쓰는 정보가 아니라(멘토 지적) 이 화면에서 뺐고 관리자 목록에만 남김 (docs/decisions.md). 하단 시트에 선택 항목 요약.
 // 배경 타일 설정은 lib/map.js (OSM 표준 타일, 출처 표기 필수)
 const CENTER = [37.5894, 127.0167]
-const COLORS = { received: '#9CA3AF', review: '#BFD300', action: '#BFD300', done: '#001A47' }
+const COLORS = { received: '#001a47', review: '#a7430d', action: '#a7430d', done: '#166548' }
 const FILTERS = [['all', '전체'], ['resident', '주민 제보'], ['done', '조치 완료']]
 const LEGEND = [['received', '접수'], ['review', '검토·조치 중'], ['done', '조치 완료']]
 // 멀리서 보면 가까운 제보를 숫자 원으로 묶고, 확대하면 낱개로 풀린다 (부동산 앱 지도처럼). 의존 라이브러리 없이 화면 격자로 묶는다.
@@ -64,6 +65,7 @@ export default function MapPage() {
   const layer = useRef(null)
   const [reports, setReports] = useState([])
   const [filter, setFilter] = useState('all')
+  const [query, setQuery] = useState('')
   const [selected, setSelected] = useState(null)
   const [confirmMsg, setConfirmMsg] = useState('')
   const [shots, setShots] = useState({ before: null, after: null }) // 선택한 제보의 조치 전·후 사진 (눌렀을 때 불러옴)
@@ -77,7 +79,7 @@ export default function MapPage() {
       myReports.markConfirmed(publicId)
       setReports((list) => list.map((f) => (f.properties.public_id === publicId
         ? { ...f, properties: { ...f.properties, confirm_count: r.confirm_count, cross_checked: r.cross_checked } } : f)))
-      setSelected((f) => ({ ...f, properties: { ...f.properties, confirm_count: r.confirm_count, cross_checked: r.cross_checked } }))
+      setSelected((f) => f?.properties.public_id === publicId ? { ...f, properties: { ...f.properties, confirm_count: r.confirm_count, cross_checked: r.cross_checked } } : f)
       setConfirmMsg('확인 고마워요. 담당자 화면의 우선순위에 반영됩니다.')
     } catch (e) { setConfirmMsg(`실패: ${e.message}`) }
   }
@@ -85,6 +87,7 @@ export default function MapPage() {
   useEffect(() => {
     map.current = L.map(el.current, { zoomControl: false }).setView(CENTER, 14)
     addBaseLayer(map.current)
+    L.control.zoom({ position: 'bottomright' }).addTo(map.current)
     // 어린이보호구역 경계: 얇은 회색 선. 제보·공백 점보다 아래에 깔고, 눌러도 반응하지 않음
     map.current.createPane('zones').style.zIndex = 350
     api.zones().then((z) => {
@@ -103,9 +106,13 @@ export default function MapPage() {
 
   const shown = useMemo(() => {
     const repPts = reports.map((f) => ({ ...f, _color: COLORS[f.properties.status] ?? COLORS.received }))
-    if (filter === 'done') return repPts.filter((f) => f.properties.status === 'done')
-    return repPts
-  }, [reports, filter])
+    const term = query.trim().toLowerCase()
+    return repPts.filter(({ properties: p }) => {
+      if (filter === 'done' && p.status !== 'done') return false
+      if (filter === 'resident' && p.status === 'done') return false
+      return !term || [p.category, p.facility_label, p.address].some((value) => value?.toLowerCase().includes(term))
+    })
+  }, [reports, filter, query])
 
   useEffect(() => {
     layer.current.clearLayers()
@@ -115,7 +122,11 @@ export default function MapPage() {
         const [lon, lat] = f.geometry.coordinates
         // 조치 완료 뒤 '아직 그대로'라는 주민 의견이 더 많은 곳은 빨간 테두리로 표시
         const recheck = f.properties.recheck
-        L.circleMarker([lat, lon], { radius: recheck ? 8 : 6, color: recheck ? '#dc2626' : f._color, fillColor: f._color, fillOpacity: 0.8, weight: recheck ? 3 : 1 })
+        const icon = L.divIcon({
+          className: 'resident-map-pin', iconSize: [32, 32],
+          html: `<span style="background:${f._color};border-color:${recheck ? '#dc2626' : '#fff'}"><img src="${residentAsset('home-imgPin.svg')}" alt=""></span>`,
+        })
+        L.marker([lat, lon], { icon, alt: f.properties.category ?? '주민 제보' })
           .on('click', () => { setSelected(f); setConfirmMsg('') })
           .addTo(layer.current)
         return
@@ -123,18 +134,10 @@ export default function MapPage() {
       const lls = items.map((f) => [f.geometry.coordinates[1], f.geometry.coordinates[0]])
       const center = lls.reduce((a, c) => [a[0] + c[0] / lls.length, a[1] + c[1] / lls.length], [0, 0])
       const size = Math.min(60, 34 + items.length * 2)
-      // 둘레 고리를 상태별 색 비율로 칠해서, 묶음 안에서도 접수 / 검토·조치 중 / 조치 완료가 구분되게 한다
-      const n = items.length
-      const cnt = { received: 0, mid: 0, done: 0 }
-      items.forEach((f) => { const st = f.properties.status; cnt[st === 'done' ? 'done' : st === 'received' ? 'received' : 'mid'] += 1 })
-      const parts = [['received', COLORS.received], ['mid', COLORS.review], ['done', COLORS.done]].filter(([k]) => cnt[k] > 0)
-      let acc = 0
-      const ring = parts.map(([k, c]) => { const from = acc; acc += (cnt[k] / n) * 100; return `${c} ${from}% ${acc}%` }).join(',')
       const icon = L.divIcon({
-        className: '', iconSize: [size, size],
-        html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:conic-gradient(${ring});box-shadow:0 1px 4px rgba(0,0,0,.35);border:2px solid #fff;display:flex;align-items:center;justify-content:center"><div style="width:${size - 16}px;height:${size - 16}px;border-radius:50%;background:#fff;color:#001A47;display:flex;align-items:center;justify-content:center;font:700 14px/1 Pretendard,sans-serif">${n}</div></div>`,
+        className: 'resident-cluster', iconSize: [size, size], html: String(items.length),
       })
-      L.marker(center, { icon, keyboard: false })
+      L.marker(center, { icon, alt: `제보 ${items.length}건 묶음` })
         .on('click', () => { setSelected(null); map.current.fitBounds(L.latLngBounds(lls), { padding: [70, 70], maxZoom: MAX_CLUSTER_ZOOM }) })
         .addTo(layer.current)
     })
@@ -154,29 +157,38 @@ export default function MapPage() {
     return () => { alive = false }
   }, [p?.public_id]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <div className="relative h-full">
-      <div ref={el} className="absolute inset-0" />
-      <div className="absolute inset-x-0 top-0 z-[1000] flex flex-wrap gap-1.5 px-4 pt-4">
+    <section className="resident-screen">
+      <ResidentHeader caption="성북구 주민 제보" title="동네 지도" />
+      <input type="search" aria-label="제보 검색" placeholder="제보 유형 · 시설 검색" value={query}
+        onChange={(e) => { setQuery(e.target.value); setSelected(null) }}
+        className="rounded-xl border border-[#ebefcb] bg-white p-2.5 text-sm" />
+      <div className="flex flex-wrap gap-1.5">
         {FILTERS.map(([k, label]) => (
-          <button key={k} type="button" onClick={() => setFilter(k)}
-            className={`h-11 rounded-full px-4 text-sm ${filter === k ? 'bg-ink text-white' : 'border border-line bg-white text-ink'}`}>{label}</button>
+          <button key={k} type="button" aria-pressed={filter === k} onClick={() => { setFilter(k); setSelected(null) }}
+            className={`resident-chip ${filter === k ? 'bg-ink text-white' : 'border border-line bg-white text-ink'}`}>{label}</button>
         ))}
       </div>
-      <div className="absolute bottom-3 left-3 z-[1000] rounded-full border border-line bg-white px-3 py-1.5 text-[13px] text-ink shadow-sm">
-        이 지역 제보 <strong className="text-brand">{inView}건</strong>
-      </div>
-      <div className={`absolute ${p ? 'bottom-[280px]' : 'bottom-3'} right-3 z-[1000] flex flex-col gap-1 rounded-[10px] border border-line bg-white px-2.5 py-2 text-xs`}>
+      <div className="flex flex-wrap justify-between gap-2 rounded-xl border border-line bg-white px-3 py-2 text-[11px] font-bold">
         {LEGEND.map(([k, label]) => (
           <div key={k} className="flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ background: COLORS[k] }} />{label}</div>
         ))}
         <div className="flex items-center gap-1"><span className="h-2 w-2 rounded-full border-2 border-red-600" style={{ background: COLORS.done }} />조치 후 재확인 필요</div>
         <div className="flex items-center gap-1"><span className="h-2 w-3 border border-red-600 bg-red-300" />어린이보호구역</div>
       </div>
+      <div className="relative">
+        <div ref={el} className="h-[min(47dvh,440px)] min-h-60 overflow-hidden rounded-[16px]" aria-label="성북구 주민 제보 지도" />
+        <span className="resident-chip pointer-events-none absolute left-3 top-3 z-[500] bg-white">
+          {view.zoom < MAX_CLUSTER_ZOOM ? '축소 · 제보 묶음' : '확대 · 개별 위치'}
+        </span>
+      </div>
+      {!p && <article className="resident-card">
+        <h2 className="text-sm font-bold">이 지역 제보 {inView}건</h2>
+        <p className="mt-1 text-xs text-sub">묶음을 누르거나 지도를 확대하면 개별 제보 위치를 볼 수 있어요.</p>
+      </article>}
       {viewer && <PhotoViewer before={shots.before} after={shots.after} onClose={() => setViewer(false)} />}
       {p && (
-        <div className="absolute inset-x-0 bottom-0 z-[1000] flex flex-col gap-2.5 rounded-t-[20px] border-t border-line bg-white px-5 pb-4 pt-2.5 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]">
-          <div className="mx-auto h-1 w-10 rounded bg-line" />
-          <button type="button" onClick={() => setSelected(null)} className="float-right text-sm text-sub">닫기</button>
+        <div className="resident-card flex flex-col gap-2.5">
+          <button type="button" onClick={() => setSelected(null)} className="self-end text-xs text-sub">닫기</button>
           <div className="flex items-start gap-3">
             <div className="flex min-w-0 flex-1 flex-col gap-2.5">
               <div className="text-[13px] text-gray-500">주민 제보 · {p.status_label}{p.facility_label && ` · ${p.facility_label}`}</div>
@@ -199,13 +211,13 @@ export default function MapPage() {
           {p.status !== 'done' && (
             <button type="button" disabled={myReports.confirmed(p.public_id) || myReports.ids().includes(p.public_id)}
               onClick={() => confirmSeen(p.public_id)}
-              className="mt-2 h-[46px] w-full rounded-xl bg-brand text-[15px] font-semibold text-white disabled:opacity-40">
+              className="resident-chip self-start bg-[#ebefcb] disabled:opacity-40">
               {myReports.confirmed(p.public_id) ? '확인했어요' : '나도 봤어요 (+1)'}
             </button>
           )}
           {confirmMsg && <p className="mt-1 text-[13px] text-gray-600">{confirmMsg}</p>}
         </div>
       )}
-    </div>
+    </section>
   )
 }
