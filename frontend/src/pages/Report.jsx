@@ -5,13 +5,15 @@ import AIResultCard from '../components/AIResultCard.jsx'
 import NearbyReports from '../components/NearbyReports.jsx'
 import PhotoStrip from '../components/PhotoStrip.jsx'
 import PinPicker from '../components/PinPicker.jsx'
+import StepBar from '../components/StepBar.jsx'
 import { takenAt } from '../lib/exif.js'
 import { api } from '../lib/api.js'
 import { currentPosition, resizeImage } from '../lib/image.js'
 import { myReports } from '../lib/myReports.js'
 
-// 주민 2 제보: 1 사진 → 2 위치(자동 + 핀 조정) → 3 확인(AI 결과, 시설 종류, 메모) → 보내기
-// 와이어프레임 '주민 2 · 제보' 배치. 데이터 흐름(위 함수들)은 그대로. 시설 종류 선택은 와이어프레임에 없지만 담당 부서 배정에 필요해서 유지
+// 주민 2 제보: 1 사진(여러 장) → 2 위치(자동 + 핀 조정) → 3 확인(AI 결과, 시설 종류) → 보내기
+// 사진은 목록 하나(photos)로 관리한다. 0번이 대표 사진이고 제보의 AI 분류·점수·지도 표시는 대표 사진만 쓴다. 사진마다 메모가 따로 있다.
+// 올린 사진은 서버에 있으니 다른 화면에 갔다 와도 임시저장(키와 메모)으로 다시 불러온다.
 // 시설 종류로 담당 부서가 정해진다 (서버 규칙, docs/departments.md). 모르면 '모름' → 안전점검 총괄 부서
 // 체험용 사진: frontend/public/demo/sample.jpg (직접 찍은 사진만. AI-Hub 사진은 약관상 넣으면 안 됨)
 // 제보 예시 안내 4개 (멘토 지적: 주민이 무엇을 찍어야 하는지 분명하게). 소방용수는 주민이 신경 쓰는 대상이 아니라 넣지 않음
@@ -21,41 +23,43 @@ const EXAMPLES = [
   ['보도·계단 파손', '깨지고 패여서 넘어질 수 있는 곳'],
   ['흐려진 노면 표시', '횡단보도·정지선이 지워져 안 보이는 곳'],
 ]
+const MAX_PHOTOS = 4
+const photoSrc = (key) => `/api/photos/${key}` // 서버에 올라간 사진 (로컬은 바로, supabase는 서명 주소로 넘겨 줌)
+const aiDraft = (ai) => (ai && !ai.mock && ai.category ? `${ai.category} 사진입니다. ${ai.reason ?? ''}`.trim().slice(0, 200) : '')
 
 export default function Report() {
   const [params] = useSearchParams()
   const isDemo = params.get('demo') === '1'
   const navigate = useNavigate()
-  const [photo, setPhoto] = useState(null)   // POST /api/photos 응답
-  const [preview, setPreview] = useState(null)
+  const [photos, setPhotos] = useState([])   // [{key, preview, memo, takenAt, ai}] 최대 4장, 0번이 대표
   const [pos, setPos] = useState(null)       // 제보에 쓸 위치 (핀으로 바꿀 수 있음)
   const [locState, setLocState] = useState('finding') // finding / auto / manual / failed
   const [facilityTypes, setFacilityTypes] = useState({})
   const [facility, setFacility] = useState('unknown')
-  const [memo, setMemo] = useState('')
   const [aiDrafted, setAiDrafted] = useState(false) // 사진 메모 칸이 AI 초안으로 채워진 상태
-  const [lastFile, setLastFile] = useState(null) // '다시 시도'용
-  const [photoMemo, setPhotoMemo] = useState('')    // 대표 사진 메모
-  const [mainTaken, setMainTaken] = useState(null)  // 대표 사진 촬영 일시
-  const [extras, setExtras] = useState([])         // 추가 사진 [{key, preview, memo, takenAt}], 최대 3장
-  const [adding, setAdding] = useState(false)
-  const [busy, setBusy] = useState(false)
+  const [lastFiles, setLastFiles] = useState(null)  // '다시 시도'용
+  const [uploading, setUploading] = useState(false)
+  const [busy, setBusy] = useState(false)           // 제보 보내는 중
   const [error, setError] = useState('')
-
   const [draftBack, setDraftBack] = useState(false) // 임시저장을 불러온 상태
+  const [draftReady, setDraftReady] = useState(false)
+
+  // 임시저장 불러오기: 올려 둔 사진(서버에 있음)과 메모, 시설 종류
   useEffect(() => {
     const d = myReports.draft()
-    if (d) {
-      if (d.memo) setMemo(d.memo)
-      if (d.photoMemo) setPhotoMemo(d.photoMemo)
-      if (d.facility) setFacility(d.facility)
-      setDraftBack(!!(d.memo || d.photoMemo))
+    if (d?.photos?.length) {
+      setPhotos(d.photos.map((p) => ({ ...p, preview: photoSrc(p.key) })))
+      setAiDrafted(!!d.aiDrafted)
+      setDraftBack(true)
     }
+    if (d?.facility) setFacility(d.facility)
+    setDraftReady(true)
   }, [])
-  // 글을 쓰는 대로 저장 (불러오기 전의 빈 값이 저장된 글을 지우지 않도록 첫 렌더 직후에는 건너뜀)
-  const [draftReady, setDraftReady] = useState(false)
-  useEffect(() => { setDraftReady(true) }, [])
-  useEffect(() => { if (draftReady) myReports.saveDraft({ memo, photoMemo, facility }) }, [memo, photoMemo, facility]) // eslint-disable-line react-hooks/exhaustive-deps
+  // 바뀔 때마다 저장 (불러오기 전의 빈 값이 저장된 것을 지우지 않도록 불러온 뒤부터)
+  useEffect(() => {
+    if (!draftReady) return
+    myReports.saveDraft({ photos: photos.map(({ key, memo, takenAt: t, ai }) => ({ key, memo, takenAt: t, ai })), facility, aiDrafted })
+  }, [photos, facility, aiDrafted, draftReady])
 
   useEffect(() => {
     currentPosition().then((p) => {
@@ -64,56 +68,43 @@ export default function Report() {
     api.meta().then((m) => setFacilityTypes(m.facility_types)).catch(() => {})
   }, [])
 
-  async function handleFile(file) {
-    setError(''); setBusy(true); setPhoto(null); setLastFile(file)
+  // 사진 올리기: 카메라로 찍은 1장이든 앨범에서 고른 여러 장이든 같은 길. 사진마다 AI가 메모 초안을 채운다.
+  // 제보의 AI 분류와 점수는 대표(첫 번째) 사진만 쓰고, 다른 사진의 AI 결과는 메모 초안에만 쓴다.
+  async function addFiles(files) {
+    const list = [...files].slice(0, MAX_PHOTOS - photos.length)
+    if (!list.length) return setError(`사진은 최대 ${MAX_PHOTOS}장까지 붙일 수 있어요.`)
+    setError(''); setLastFiles(list); setUploading(true)
     try {
-      setMainTaken(await takenAt(file))
-      const blob = await resizeImage(file)
-      setPreview(URL.createObjectURL(blob))
-      const up = await api.uploadPhoto(blob)
-      setPhoto(up)
-      // 대표 사진 메모를 비워 둔 경우에만 AI가 본 내용으로 그 사진의 메모 초안을 채운다 (임시 결과는 쓰지 않음). 주민이 고쳐서 보낼 수 있다.
-      if (!photoMemo.trim() && up.ai && !up.ai.mock && up.ai.category) {
-        setPhotoMemo(`${up.ai.category} 사진입니다. ${up.ai.reason ?? ''}`.trim().slice(0, 200)); setAiDrafted(true)
-      }
-    } catch (e) { setError(`사진 처리 실패: ${e.message}`) } finally { setBusy(false) }
-  }
-
-  // 사진 추가: 추가 사진도 AI가 본 내용으로 사진 메모 초안을 채운다 (대표 사진과 같은 방식, 임시 결과는 쓰지 않음).
-  // 제보의 AI 분류와 우선순위는 대표 사진만 쓰고, 추가 사진의 AI 결과는 메모 초안에만 쓴다. 주민이 고쳐서 보낼 수 있다.
-  async function addPhotos(files) {
-    setError(''); setAdding(true)
-    try {
-      const next = [...extras]
-      for (const file of files) {
-        if (next.length >= 3) break
+      for (const file of list) {
+        const taken = await takenAt(file)
         const blob = await resizeImage(file)
         const up = await api.uploadPhoto(blob)
-        const draft = up.ai && !up.ai.mock && up.ai.category ? `${up.ai.category} 사진입니다. ${up.ai.reason ?? ''}`.trim().slice(0, 200) : ''
+        const draft = aiDraft(up.ai)
         if (draft) setAiDrafted(true)
-        next.push({ key: up.key, preview: URL.createObjectURL(blob), memo: draft, takenAt: await takenAt(file) })
+        setPhotos((l) => (l.length >= MAX_PHOTOS ? l : [...l, { key: up.key, preview: URL.createObjectURL(blob), memo: draft, takenAt: taken, ai: up.ai }]))
       }
-      setExtras(next)
-    } catch (e) { setError(`사진 추가 실패: ${e.message}`) } finally { setAdding(false) }
+      setLastFiles(null)
+    } catch (e) { setError(`사진 처리 실패: ${e.message}`) } finally { setUploading(false) }
   }
-  const stripItems = photo ? [{ key: 'main', preview, memo: photoMemo, takenAt: mainTaken }, ...extras] : []
-  const setItemMemo = (i, v) => (i === 0 ? setPhotoMemo(v) : setExtras((l) => l.map((x, k) => (k === i - 1 ? { ...x, memo: v } : x))))
-  const removeItem = (i) => setExtras((l) => l.filter((_, k) => k !== i - 1))
+  const setMemo = (i, v) => setPhotos((l) => l.map((p, k) => (k === i ? { ...p, memo: v } : p)))
+  const removePhoto = (i) => setPhotos((l) => l.filter((_, k) => k !== i))                    // 대표를 지우면 다음 사진이 대표가 됨
+  const makeMain = (i) => setPhotos((l) => [l[i], ...l.filter((_, k) => k !== i)])           // 가장 문제가 잘 보이는 사진을 대표로
 
   async function useDemoPhoto() {
     const res = await fetch('/demo/sample.jpg')
     if (!res.ok) return setError('체험용 사진이 아직 없음 (frontend/public/demo/sample.jpg)')
-    handleFile(await res.blob())
+    addFiles([await res.blob()])
   }
 
   async function submit() {
     setBusy(true); setError('')
     try {
+      const [main, ...rest] = photos
       const r = await api.createReport({
-        photo_key: photo.key, lat: pos?.lat ?? null, lon: pos?.lon ?? null, accuracy_m: pos?.accuracy ?? null,
-        memo: memo || null, is_demo: isDemo, facility_type: facility,
-        taken_at: mainTaken, photo_memo: photoMemo || null,
-        extra_photos: extras.map((x) => ({ photo_key: x.key, memo: x.memo || null, taken_at: x.takenAt })),
+        photo_key: main.key, lat: pos?.lat ?? null, lon: pos?.lon ?? null, accuracy_m: pos?.accuracy ?? null,
+        memo: null, is_demo: isDemo, facility_type: facility,
+        taken_at: main.takenAt, photo_memo: main.memo || null,
+        extra_photos: rest.map((x) => ({ photo_key: x.key, memo: x.memo || null, taken_at: x.takenAt })),
       })
       myReports.clearDraft()
       myReports.add(r.public_id)
@@ -129,17 +120,15 @@ export default function Report() {
     failed: '위치를 못 가져왔어요 (https 주소에서만 동작). 지도를 눌러 위치를 지정해 주세요.',
   }[locState]
 
-  const steps = [['사진', !!photo], ['위치', !!pos], ['확인', !!photo]]
+  const main = photos[0]
+  const steps = [['사진', photos.length > 0], ['위치', !!pos], ['확인', !!main?.ai]]
   return (
     <section className="flex min-h-full flex-col gap-3 bg-page px-5 pb-6 pt-6 text-ink report-page">
       <header className="resident-header"><div className="flex items-center gap-1"><Link to="/" aria-label="뒤로" className="flex h-11 w-8 shrink-0 items-center">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
         </Link><Brand /></div><h1>제보하기{isDemo && <span className="ml-1 text-sm text-amber-600">(체험)</span>}</h1></header>
-      <div className="grid grid-cols-3 gap-1.5">
-        {steps.map(([label, done]) => <div key={label} className={`h-1 rounded ${done ? 'bg-brand' : 'bg-gray-300'}`} />)}
-      </div>
-      <div className="flex justify-between text-[13px] text-sub">{steps.map(([label], i) => <span key={label}>{i + 1} {label}</span>)}</div>
-      {draftBack && <p className="rounded-lg bg-white px-3 py-2 text-[13px] text-sub">쓰던 글을 불러왔어요. 사진은 다시 골라 주세요.</p>}
+      <StepBar steps={steps} />
+      {draftBack && photos.length > 0 && <p className="rounded-lg bg-white px-3 py-2 text-[13px] text-sub">쓰던 제보를 불러왔어요. 올려 둔 사진과 메모가 그대로 있어요.</p>}
       <p className="text-[13px] text-sub">얼굴·차량 번호판이 나오지 않게, 길에서만 찍어 주세요. 사진 속 위치 정보(EXIF)는 지우고 저장합니다.</p>
 
       <div>
@@ -154,22 +143,34 @@ export default function Report() {
         </div>
       </div>
 
-      <div className="relative flex min-h-[150px] flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gray-300 p-3">
-        {preview && <img src={preview} alt="제보 사진" className="absolute inset-0 h-full w-full object-cover" />}
-        <div className="relative flex flex-col items-center gap-2">
+      {main ? (
+        <div className="relative overflow-hidden rounded-2xl bg-gray-300">
+          <img src={main.preview} alt="대표 사진" className="block max-h-[320px] w-full object-cover" />
+          <span className="absolute left-2 top-2 rounded bg-ink px-2 py-0.5 text-xs font-semibold text-white">대표 사진</span>
+        </div>
+      ) : (
+        <div className="flex min-h-[150px] flex-col items-center justify-center gap-2 rounded-2xl bg-gray-300 p-3">
           {isDemo
             ? <button type="button" onClick={useDemoPhoto} className="rounded-lg bg-white/90 px-4 py-2 text-sm font-medium">체험용 사진 불러오기</button>
-            : <label className="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-white/90 px-4 text-sm font-medium">
-                {preview ? '사진 다시 찍기' : '사진 찍기·고르기'}
-                <input type="file" accept="image/*" capture="environment" className="hidden"
-                  onChange={(e) => e.target.files[0] && handleFile(e.target.files[0])} />
-              </label>}
-          {busy && !photo && <span className="rounded bg-white/90 px-2 py-1 text-[13px]">AI가 사진을 보는 중…</span>}
+            : (
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <label className="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-white/90 px-4 text-sm font-semibold">
+                  카메라로 찍기
+                  <input type="file" accept="image/*" capture="environment" className="hidden" disabled={uploading}
+                    onChange={(e) => { if (e.target.files.length) addFiles(e.target.files); e.target.value = '' }} />
+                </label>
+                <label className="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-white/90 px-4 text-sm font-semibold">
+                  앨범에서 고르기 (여러 장 가능)
+                  <input type="file" accept="image/*" multiple className="hidden" disabled={uploading}
+                    onChange={(e) => { if (e.target.files.length) addFiles(e.target.files); e.target.value = '' }} />
+                </label>
+              </div>
+            )}
         </div>
-      </div>
-      {busy && !photo && <p className="-mt-2 text-[13px] text-sub">AI가 사진을 보고 있어요. 보통 5초쯤 걸리고, 처음에는 10초 넘게 걸릴 수 있어요. 이 화면을 닫지 말고 기다려 주세요.</p>}
-      {error && !busy && lastFile && !photo && (
-        <button type="button" onClick={() => handleFile(lastFile)} className="h-11 rounded-xl border border-brand text-sm font-semibold text-brand">다시 시도</button>
+      )}
+      {uploading && <p className="text-[13px] text-sub">AI가 사진을 보고 있어요. 보통 5초쯤 걸리고, 처음에는 10초 넘게 걸릴 수 있어요. 이 화면을 닫지 말고 기다려 주세요.</p>}
+      {error && !uploading && lastFiles && (
+        <button type="button" onClick={() => addFiles(lastFiles)} className="h-11 rounded-xl border border-brand text-sm font-semibold text-brand">다시 시도</button>
       )}
 
       <div className="flex flex-col gap-2 rounded-xl border border-line bg-white p-3">
@@ -181,9 +182,9 @@ export default function Report() {
         {pos && <p className="text-[13px] text-sub">{pos.lat.toFixed(5)}, {pos.lon.toFixed(5)} · 핀을 끌어 옮길 수 있어요</p>}
       </div>
 
-      {photo && <PhotoStrip items={stripItems} onMemo={setItemMemo} onRemove={removeItem} onAdd={addPhotos} adding={adding} aiDrafted={aiDrafted} />}
-      {photo && <AIResultCard ai={photo.ai} highlight />}
-      {photo && <NearbyReports pos={pos} accuracy={pos?.accuracy} category={photo.ai && !photo.ai.mock ? photo.ai.category : null} />}
+      {photos.length > 0 && <PhotoStrip items={photos} onMemo={setMemo} onRemove={removePhoto} onMakeMain={makeMain} onAdd={addFiles} adding={uploading} max={MAX_PHOTOS} aiDrafted={aiDrafted} />}
+      {main?.ai && <AIResultCard ai={main.ai} highlight />}
+      {main && <NearbyReports pos={pos} accuracy={pos?.accuracy} category={main.ai && !main.ai.mock ? main.ai.category : null} />}
 
       <div>
         <p className="mb-1.5 text-sm text-sub">어떤 시설인가요? (담당 부서를 정하는 데 씁니다)</p>
@@ -197,13 +198,8 @@ export default function Report() {
         </div>
       </div>
 
-      <label className="flex flex-col gap-1.5 text-sm text-sub">전체 한 줄 메모 (선택, 사진 전체에 대한 말)
-        <input value={memo} onChange={(e) => setMemo(e.target.value)} maxLength={200}
-          placeholder="예: 비 온 뒤 금이 더 커졌어요" className="h-11 rounded-xl border border-line bg-white px-3 text-[15px] text-ink" />
-      </label>
-
       {error && <p className="text-sm text-danger">{error}</p>}
-      <button type="button" disabled={!photo || busy} onClick={submit}
+      <button type="button" disabled={!main || busy || uploading} onClick={submit}
         className="h-[52px] rounded-2xl bg-brand text-base font-semibold text-white disabled:opacity-40">제보 보내기</button>
     </section>
   )
