@@ -100,10 +100,11 @@ export default function Report() {
   const removePhoto = (i) => setPhotos((l) => l.filter((_, k) => k !== i))                    // 대표를 지우면 다음 사진이 대표가 됨
   const makeMain = (i) => setPhotos((l) => [l[i], ...l.filter((_, k) => k !== i)])           // 가장 문제가 잘 보이는 사진을 대표로
 
+  // 체험용 사진 3장(sample.jpg, sample2.jpg, sample3.jpg). 첫 장이 없으면 오류, 나머지가 없으면 있는 것만 붙인다.
   async function useDemoPhoto() {
-    const res = await fetch('/demo/sample.jpg')
-    if (!res.ok) return setError('체험용 사진이 아직 없음 (frontend/public/demo/sample.jpg)')
-    addFiles([await res.blob()])
+    const res = await Promise.all(['sample.jpg', 'sample2.jpg', 'sample3.jpg'].map((f) => fetch('/demo/' + f)))
+    if (!res[0].ok) return setError('체험용 사진이 아직 없음 (frontend/public/demo/sample.jpg)')
+    addFiles(await Promise.all(res.filter((r) => r.ok).map((r) => r.blob())))
   }
 
   async function submit() {
