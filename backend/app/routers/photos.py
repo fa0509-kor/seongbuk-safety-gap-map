@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from fastapi.concurrency import run_in_threadpool
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, RedirectResponse
@@ -25,7 +27,13 @@ async def upload_photo(file: UploadFile = File(...), classify: bool = True, db: 
     key = storage.new_key()
     storage.save(key, jpeg)
     # AI 호출은 몇 초 걸리는 동기 함수라, 그대로 부르면 서버가 그동안 다른 요청을 못 받는다(사진 여러 장이 줄을 선다). 스레드에서 돌린다.
-    ai, provider = await run_in_threadpool(vision.classify_cached, jpeg) if classify else (None, None)
+    # 분류와 공개 검수(얼굴·번호판 등)는 서로 상관없어서 동시에 돌린다. 검수 결과는 ai["moderation"]에 함께 저장한다.
+    if classify:
+        (ai, provider), moderation = await asyncio.gather(
+            run_in_threadpool(vision.classify_cached, jpeg), run_in_threadpool(vision.moderate, jpeg))
+        ai = {**ai, "moderation": moderation}
+    else:
+        ai, provider = None, None
     photo = Photo(key=key, width=w, height=h, ai=ai, ai_provider=provider)
     db.add(photo)
     db.commit()

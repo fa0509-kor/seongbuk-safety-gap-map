@@ -18,6 +18,8 @@ from .constants import CATEGORIES
 log = logging.getLogger(__name__)
 PROMPT_VERSION = "vision_v1"
 PROMPT = (Path(__file__).parent / "prompts" / f"{PROMPT_VERSION}.txt").read_text(encoding="utf-8")
+MODERATION_VERSION = "moderation_v1"
+MODERATION_PROMPT = (Path(__file__).parent / "prompts" / f"{MODERATION_VERSION}.txt").read_text(encoding="utf-8")
 
 
 def _conf(v) -> int:
@@ -140,3 +142,65 @@ def classify_cached(jpeg: bytes) -> tuple[dict, str]:
             while len(_cache) > _CACHE_MAX:
                 _cache.popitem(last=False)
     return result, provider
+
+# ---- 공개 검수: 얼굴·번호판·부적절한 내용·점검과 상관없는 사진을 걸러낸다 -------------------------------
+# 분류 프롬프트(vision_v1)는 건드리지 않고 별도 호출로 한다 (프롬프트를 바꾸면 분류 결과가 달라질 수 있음).
+# AI가 놓칠 수 있어서 '모두 막는다'는 보장이 아니다. 판단하지 못하면(키 없음·호출 실패) ok=None으로 두고 공개 여부는 호출한 쪽이 정한다.
+FLAG_LABELS = {"person": "사람 얼굴", "plate": "차량 번호판", "inappropriate": "부적절한 내용", "off_topic": "점검과 상관없는 사진"}
+
+
+def parse_moderation(text: str) -> dict:
+    start = text.find("{")
+    if start < 0:
+        raise ValueError(f"JSON 없음: {text[:200]!r}")
+    data, _ = json.JSONDecoder().raw_decode(text[start:])
+    flags = [k for k in FLAG_LABELS if data.get(k) is True]
+    return {"checked": True, "ok": not flags, "flags": flags, "reason": str(data.get("reason", ""))[:200],
+            "version": MODERATION_VERSION}
+
+
+def _moderate_openai(jpeg: bytes) -> str:
+    from openai import OpenAI
+    url = "data:image/jpeg;base64," + base64.b64encode(jpeg).decode()
+    resp = OpenAI().chat.completions.create(
+        model=config.OPENAI_VISION_MODEL, temperature=0, response_format={"type": "json_object"},
+        messages=[{"role": "user", "content": [{"type": "text", "text": MODERATION_PROMPT},
+                                               {"type": "image_url", "image_url": {"url": url}}]}])
+    return resp.choices[0].message.content
+
+
+def _moderate_anthropic(jpeg: bytes) -> str:
+    import anthropic
+    resp = anthropic.Anthropic().messages.create(
+        model=config.ANTHROPIC_VISION_MODEL, max_tokens=300,
+        messages=[{"role": "user", "content": [
+            {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": base64.b64encode(jpeg).decode()}},
+            {"type": "text", "text": MODERATION_PROMPT}]}])
+    return "".join(getattr(b, "text", "") for b in resp.content if getattr(b, "type", "") == "text")
+
+
+_MODERATORS = {"openai": _moderate_openai, "anthropic": _moderate_anthropic}
+_mod_cache: OrderedDict = OrderedDict()
+
+
+def moderate(jpeg: bytes) -> dict:
+    """공개해도 되는 사진인지 AI로 확인. 항상 dict를 돌려준다 (예외를 던지지 않는다)."""
+    provider = config.vision_provider()
+    if provider not in _MODERATORS:
+        return {"checked": False, "ok": None, "flags": [], "reason": "AI 키가 없어 검수하지 않음", "version": MODERATION_VERSION}
+    key = (provider, MODERATION_VERSION, hashlib.sha256(jpeg).hexdigest())
+    with _cache_lock:
+        hit = _mod_cache.get(key)
+        if hit is not None:
+            _mod_cache.move_to_end(key)
+            return deepcopy(hit)
+    try:
+        result = parse_moderation(_MODERATORS[provider](jpeg))
+    except Exception:  # noqa: BLE001  — 검수가 실패해도 업로드는 막지 않는다
+        log.exception("공개 검수 호출 실패")
+        return {"checked": False, "ok": None, "flags": [], "reason": "검수 호출 실패", "version": MODERATION_VERSION}
+    with _cache_lock:
+        _mod_cache[key] = deepcopy(result)
+        while len(_mod_cache) > _CACHE_MAX:
+            _mod_cache.popitem(last=False)
+    return result

@@ -69,6 +69,10 @@ def vision_provider() -> str:
     return "mock"
 
 
+# 지도에서 조치 완료 전 제보의 사진도 보여 줄지. 켜면 AI 공개 검수를 통과한 사진(얼굴·번호판·부적절·무관 없음)만 누구에게나 보인다.
+# 기본은 꺼짐(조치 완료 건만 공개, 11/6 팀 결정). 팀이 합의하면 PUBLIC_PHOTOS_AFTER_AI_CHECK=1 로 켠다.
+PUBLIC_PHOTOS_AFTER_AI_CHECK = os.getenv("PUBLIC_PHOTOS_AFTER_AI_CHECK", "").lower() in ("1", "true", "yes")
+
 OPENAI_VISION_MODEL = os.getenv("OPENAI_VISION_MODEL", "gpt-4o-mini")
 ANTHROPIC_VISION_MODEL = os.getenv("ANTHROPIC_VISION_MODEL", "claude-sonnet-5-5")
 

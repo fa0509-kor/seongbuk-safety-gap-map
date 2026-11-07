@@ -6,9 +6,9 @@ from math import asin, cos, radians, sin, sqrt
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, object_session, selectinload
 
-from .. import departments, scoring, serialize
+from .. import config, departments, scoring, serialize
 from ..constants import (CROSS_CHECK_MIN, KST, NOT_FIXED_MIN, RECENT_DONE_DAYS, RECUR_LOOKBACK_DAYS, STATUSES,
                          radius_for)
 from ..db import get_db
@@ -83,15 +83,44 @@ def _q():
                                   selectinload(Report.feedback), selectinload(Report.recurrence_link), selectinload(Report.client))
 
 
+def _moderation_by_key(r: Report) -> dict[str, bool | None]:
+    """사진별 AI 공개 검수 결과: True 통과 / False 걸림 / None 검수하지 못함(옛 사진, 키 없음, 호출 실패)."""
+    db = object_session(r)
+    keys = [p.photo_key for p in r.photos] or ([r.photo_key] if r.photo_key else [])
+    out: dict[str, bool | None] = {}
+    for k in keys:
+        photo = db.get(Photo, k) if db is not None else None
+        mod = (photo.ai or {}).get("moderation") if photo is not None else None
+        out[k] = mod.get("ok") if isinstance(mod, dict) and mod.get("checked") else None
+    return out
+
+
 def _public(r: Report, client_key: str | None = None) -> dict:
     """주민·공개 화면용 제보. **조치 완료 전 제보의 사진은 제보를 보낸 브라우저(client_key가 같음)에게만** 내보낸다.
     제보 번호는 지도에 공개돼 있어서, 번호만 알아도 사진을 볼 수 있으면 사실상 모든 제보 사진이 공개되기 때문이다.
-    조치 완료된 제보는 누구에게나 사진을 보여 준다(지도의 조치 전·후 보기). 식별값이 없던 옛 제보는 본인 확인이 안 되므로 완료 전에는 사진을 숨긴다."""
+    조치 완료된 제보는 누구에게나 사진을 보여 준다(지도의 조치 전·후 보기). 식별값이 없던 옛 제보는 본인 확인이 안 되므로 완료 전에는 사진을 숨긴다.
+    AI 공개 검수에서 걸린 사진(얼굴·번호판·부적절·점검과 무관)은 본인 브라우저를 빼고 누구에게도 보이지 않는다(완료된 제보도 같다).
+    config.PUBLIC_PHOTOS_AFTER_AI_CHECK를 켜면 완료 전 제보도 검수를 통과한(ok=True) 사진은 공개한다."""
     out = serialize.report(r)
     owner = bool(client_key and r.client is not None and r.client.client_key == client_key)
-    if r.status == "done" or owner:
+    if owner:
         return out
-    return out | {"photo_url": None, "after_photo_url": None, "photos": []}
+    done = r.status == "done"
+    if not done and not config.PUBLIC_PHOTOS_AFTER_AI_CHECK:
+        return out | {"photo_url": None, "after_photo_url": None, "photos": []}
+    mod = _moderation_by_key(r)
+    keys = [p.photo_key for p in r.photos] or ([r.photo_key] if r.photo_key else [])
+
+    def visible(key: str) -> bool:
+        ok = mod.get(key)
+        return ok is not False if done else ok is True   # 완료: 걸리지 않으면 공개 / 완료 전: 통과가 확인돼야 공개
+
+    shown = [(i, k) for i, k in enumerate(keys) if visible(k)]
+    photos = [out["photos"][i] for i, _ in shown if i < len(out["photos"])]
+    main_ok = bool(keys) and visible(keys[0])
+    return out | {"photo_url": out["photo_url"] if main_ok else None,
+                  "after_photo_url": out["after_photo_url"] if done else None,
+                  "photos": photos}
 
 
 @router.post("/api/reports", response_model=ReportOut)

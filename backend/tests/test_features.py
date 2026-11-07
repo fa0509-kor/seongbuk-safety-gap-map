@@ -162,3 +162,35 @@ def test_같은_사진은_AI_결과를_다시_부르지_않는다(monkeypatch):
     monkeypatch.setattr(vision, "classify", lambda j: ({"category": "기타", "mock": True}, "mock"))
     vision.classify_cached(b"x"); vision.classify_cached(b"x")
     assert len(vision._cache) == 0
+
+
+def test_공개_검수에서_걸린_사진은_완료된_제보도_숨긴다(monkeypatch):
+    """걸린 사진은 완료 제보에서도 안 보이고, 완료 전에는 플래그를 켜고 통과한 사진만 보인다. 본인 브라우저는 모두 본다."""
+    from backend.app import config
+    from backend.app.db import SessionLocal
+    from backend.app.models import Photo
+
+    p = upload()
+    assert p["ai"]["moderation"]["checked"] is False  # 테스트는 mock 공급자라 검수하지 않는다
+    rep = client.post("/api/reports", json={"photo_key": p["key"], "lat": 37.0, "lon": 127.5, "client_key": "moderation01"}).json()
+    pid = rep["public_id"]
+
+    def set_mod(ok):
+        with SessionLocal() as db:
+            ph = db.get(Photo, p["key"])
+            ph.ai = {**ph.ai, "moderation": {"checked": True, "ok": ok, "flags": [] if ok else ["person"]}}
+            db.commit()
+
+    set_mod(True)
+    assert client.get(f"/api/reports/{pid}").json()["photo_url"] is None          # 완료 전 + 플래그 꺼짐: 기존 규칙
+    monkeypatch.setattr(config, "PUBLIC_PHOTOS_AFTER_AI_CHECK", True)
+    assert client.get(f"/api/reports/{pid}").json()["photo_url"]                  # 완료 전 + 플래그 켜짐 + 통과: 공개
+    set_mod(False)
+    assert client.get(f"/api/reports/{pid}").json()["photo_url"] is None          # 걸린 사진은 숨김
+    mine = client.get("/api/reports", params={"ids": pid, "client_key": "moderation01"}).json()
+    assert mine[0]["photo_url"]                                                    # 본인 브라우저는 걸린 사진도 봄
+    for st in ("review", "action", "done"):
+        client.patch(f"/api/admin/reports/{admin(pid)['id']}", json={"status": st})
+    assert client.get(f"/api/reports/{pid}").json()["photo_url"] is None          # 완료돼도 걸린 사진은 숨김
+    set_mod(None)
+    assert client.get(f"/api/reports/{pid}").json()["photo_url"]                  # 검수 못 한 사진은 완료 후 기존 규칙대로 공개

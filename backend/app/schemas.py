@@ -12,6 +12,15 @@ class Alternative(BaseModel):
     confidence: int
 
 
+class Moderation(BaseModel):
+    """AI 공개 검수 결과. ok=None이면 검수하지 못한 것(키 없음, 호출 실패, 옛 사진)."""
+    checked: bool = False
+    ok: bool | None = None
+    flags: list[str] = Field([], description="person(얼굴) / plate(번호판) / inappropriate / off_topic")
+    reason: str = ""
+    version: str | None = None
+
+
 class AIResult(BaseModel):
     category: str
     confidence: int = Field(description="모델이 스스로 적은 값(0~100). 정확도가 아님")
@@ -21,6 +30,7 @@ class AIResult(BaseModel):
     prompt_version: str | None = None
     fixed: list[str] | None = Field(None, description="허용값 밖이라 보정한 내용")
     error: str | None = Field(None, description="실제 AI 호출이 실패해 임시 결과를 쓴 경우")
+    moderation: Moderation | None = Field(None, description="지도 공개 전 AI 검수(얼굴·번호판 등). 분류와는 별개")
 
 
 class PhotoOut(BaseModel):

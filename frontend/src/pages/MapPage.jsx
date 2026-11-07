@@ -116,9 +116,10 @@ export default function MapPage() {
   // 마커를 누르면 그 제보의 사진 주소를 불러온다 (지도 응답에는 사진을 싣지 않아 가볍게 유지)
   useEffect(() => {
     setShots({ before: null, after: null }); setViewer(false)
-    if (!p?.public_id || p.status !== 'done') return undefined // 지도에는 조치 완료된 제보의 사진만 보여 준다 (조치 전 제보 사진은 공개하지 않음)
+    if (!p?.public_id) return undefined
+    // 어떤 사진을 보여 줄지는 서버가 정한다: 조치 완료 제보의 사진, 그리고 서버 설정을 켰을 때 AI 공개 검수를 통과한 사진. 내 제보는 내 브라우저에서 모두 보인다
     let alive = true
-    api.myReports([p.public_id]).then((list) => { if (alive && list[0]) setShots({ before: list[0].photo_url ?? null, after: list[0].after_photo_url ?? null }) }).catch(() => {})
+    api.myReports([p.public_id], myReports.clientKey()).then((list) => { if (alive && list[0]) setShots({ before: list[0].photo_url ?? null, after: list[0].after_photo_url ?? null }) }).catch(() => {})
     return () => { alive = false }
   }, [p?.public_id]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
