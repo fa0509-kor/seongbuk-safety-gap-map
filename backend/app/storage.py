@@ -52,6 +52,12 @@ def url(key: str) -> str:
     return f"/api/photos/{key}"
 
 
+def proxy_url(key: str) -> str:
+    """서명 요청 없이 바로 만드는 사진 주소. 브라우저가 실제로 열 때 GET /api/photos/{key}가 서명 주소로 넘겨 준다(supabase).
+    사진을 안 쓰는 목록 화면에서 행마다 Supabase 서명 요청을 보내지 않으려고 쓴다 (관리자 목록이 5~6초 걸리던 원인)."""
+    return f"/api/photos/{key}"
+
+
 def local_path(key: str):
     p = (config.UPLOAD_DIR / key).resolve()
     if config.UPLOAD_DIR.resolve() not in p.parents:  # ../ 같은 경로 차단

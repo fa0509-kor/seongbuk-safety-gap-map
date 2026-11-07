@@ -94,7 +94,7 @@
 ## 관리자
 | 메서드 | 주소 | 설명 |
 | --- | --- | --- |
-| GET | `/api/admin/reports` | 목록. 쿼리: `source`, `status`, `category`, `include_demo`(기본 true), `sort=priority`(기본)/`new`/`old` |
+| GET | `/api/admin/reports` | 목록. 쿼리: `source`, `status`, `category`, `include_demo`(기본 true), `sort=priority`(기본)/`new`/`old`. 사진 주소는 서명 없이 `/api/photos/{key}`로 내보냄 (열 때 서명 주소로 이동. 목록 속도 때문) |
 | GET | `/api/admin/ledger.xlsx` | **점검 대장 엑셀**. 목록과 같은 쿼리(`source`, `status`, `category`, `sort`) + `include_demo`(기본 false). 사진·주민 메모는 넣지 않음. 열: 접수번호, 접수일시, 출처, 유형·규칙, AI 신뢰도, 담당 부서, 위치, 위도·경도, 우선순위 점수, 처리 상태, 조치 시작 기한, 기한 초과, 완료일시, 담당자 메모, 주민 확인, 교차확인, 오탐 |
 | POST | `/api/admin/reports` | CCTV 프레임 등 직접 등록. `{photo_key, source: "cctv"/"gap", lat?, lon?, ...}` |
 | GET | `/api/admin/reports/{id}` | 상세 |

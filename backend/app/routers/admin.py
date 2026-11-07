@@ -37,7 +37,9 @@ def _filtered(db: Session, source, status, category, include_demo, sort, season=
     if not include_demo:
         q = q.where(Report.is_demo.is_(False))
     q = q.order_by(Report.created_at.asc() if sort == "old" else Report.created_at.desc())
-    rows = [serialize.report(r, admin=True) for r in db.scalars(q)]
+    # 목록은 사진을 보여 주지 않으므로 사진마다 Supabase 서명을 요청하지 않고, 같은 브라우저 제보 수도 한 번에 읽는다
+    times = serialize.client_times(db)
+    rows = [serialize.report(r, admin=True, fast_urls=True, times_by_key=times) for r in db.scalars(q)]
     if season:
         rows = [x for x in rows if x["season"] == season]
     term = search.strip().casefold().removeprefix("#")
