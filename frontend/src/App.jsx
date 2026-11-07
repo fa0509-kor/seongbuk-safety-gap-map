@@ -17,7 +17,7 @@ import AdminReport from './pages/admin/AdminReport.jsx'
 function ResidentLayout() {
   return (
     <div className="mx-auto flex h-full max-w-[402px] flex-col bg-page">
-      <main className="min-h-0 flex-1 overflow-y-auto">
+      <main className="min-h-0 flex-1 overflow-y-auto break-keep [overflow-wrap:break-word]"> {/* 한글은 단어 중간에서 끊지 않는다 */}
         <Outlet />
       </main>
       <BottomBar />
