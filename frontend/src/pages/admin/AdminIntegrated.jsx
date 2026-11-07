@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { api } from '../../lib/api.js'
@@ -12,6 +12,8 @@ export default function AdminIntegrated() {
   const el = useRef(null)
   const map = useRef(null)
   const layer = useRef(null)
+  const points = useRef([]) // 지금 보이는 후보 좌표 (지도 크기가 바뀌면 다시 맞추는 데 씀)
+  const picked = useRef(null)
   const fitted = useRef('') // 마지막으로 지도 범위를 맞춘 필터. 같은 필터에서는 다시 맞추지 않는다 (주소를 눌러 확대한 상태 유지)
   const [rows, setRows] = useState([])
   const [address, setAddress] = useState('')
@@ -24,8 +26,19 @@ export default function AdminIntegrated() {
     addBaseLayer(map.current)
     layer.current = L.layerGroup().addTo(map.current)
     api.adminIntegrated().then((g) => setRows(g.features)).catch(() => {})
-    return () => map.current.remove()
+    // 글꼴·이미지가 늦게 불러와지거나 창 크기가 바뀌면 지도 칸 크기가 달라진다.
+    // 그때마다 크기를 다시 재고, 후보를 고르기 전이면 전체 후보에 다시 맞춘다
+    const ro = new ResizeObserver(() => {
+      if (!map.current) return
+      map.current.invalidateSize()
+      if (!picked.current && points.current.length) map.current.fitBounds(points.current, { padding: [16, 16], maxZoom: 16 })
+    })
+    ro.observe(el.current)
+    return () => { ro.disconnect(); map.current.remove(); map.current = null }
   }, [])
+
+  // 고른 후보는 지도 크기 감시보다 먼저 기록해 둔다 (고른 뒤에 전체 범위로 되돌아가지 않게)
+  useLayoutEffect(() => { picked.current = selected }, [selected])
 
   // 후보를 고르면 (목록·지도 어느 쪽이든) 그 위치로 확대. 위쪽 설명 길이가 바뀌어 지도 크기도 다시 잰다
   useEffect(() => {
@@ -42,20 +55,22 @@ export default function AdminIntegrated() {
 
   useEffect(() => {
     layer.current.clearLayers()
-    const points = []
+    const pts = []
     shown.forEach((f) => {
       const [lon, lat] = f.geometry.coordinates
       const n = f.properties.kinds.length
-      points.push([lat, lon])
+      pts.push([lat, lon])
       L.circleMarker([lat, lon], { radius: 2 + n * 1.5, color: '#001A47', fillOpacity: 0.6, weight: 1 })
         .on('click', () => setSelected(f)).addTo(layer.current)
     })
     // 필터가 바뀌면 보이는 후보가 모두 지도 안에 들어오게 범위를 맞춘다
     const key = `${address.trim()}|${need}|${kind}|${rows.length}`
-    if (points.length && fitted.current !== key) {
+    points.current = pts
+    if (pts.length && fitted.current !== key) {
       fitted.current = key
+      picked.current = null
       map.current.invalidateSize()
-      map.current.fitBounds(points, { padding: [16, 16], maxZoom: 16 })
+      map.current.fitBounds(pts, { padding: [16, 16], maxZoom: 16 })
     }
   }, [shown]) // eslint-disable-line react-hooks/exhaustive-deps
 
