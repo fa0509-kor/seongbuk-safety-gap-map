@@ -482,6 +482,7 @@ button:not(:disabled),select{
   color: white;
   font: 700 14px/1 'Noto Sans KR', sans-serif;
 }
+.resident-map-pin.is-done img { filter: brightness(0); } /* 라임 바탕 위에서는 흰 아이콘이 안 보여서 어둡게 */
 .resident-map-pin span {
   display: grid;
   place-items: center;
