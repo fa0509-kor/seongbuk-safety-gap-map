@@ -91,9 +91,16 @@ export default function MapPage() {
       }
       const lls = items.map((f) => [f.geometry.coordinates[1], f.geometry.coordinates[0]])
       const center = lls.reduce((a, c) => [a[0] + c[0] / lls.length, a[1] + c[1] / lls.length], [0, 0])
-      const size = Math.min(60, 34 + items.length * 2)
+      const size = Math.min(64, 40 + items.length * 2) // 고리가 들어갈 만큼 조금 크게
+      // 둘레 고리를 상태별 색 비율(접수 / 검토·조치 중 / 조치 완료)로 칠해서, 묶음 안에서도 조치 완료 비율이 보이게 한다
+      const cnt = { received: 0, mid: 0, done: 0 }
+      items.forEach((f) => { const st = f.properties.status; cnt[st === 'done' ? 'done' : st === 'received' ? 'received' : 'mid'] += 1 })
+      let acc = 0
+      const ring = [['received', COLORS.received], ['mid', COLORS.review], ['done', COLORS.done]].filter(([k]) => cnt[k] > 0)
+        .map(([k, c]) => { const from = acc; acc += (cnt[k] / items.length) * 100; return `${c} ${from}% ${acc}%` }).join(',')
       const icon = L.divIcon({
-        className: 'resident-cluster', iconSize: [size, size], html: String(items.length),
+        className: 'resident-cluster-ring', iconSize: [size, size],
+        html: `<span style="background:conic-gradient(${ring})"><b>${items.length}</b></span>`,
       })
       L.marker(center, { icon, alt: `제보 ${items.length}건 묶음` })
         .on('click', () => { setSelected(null); map.current.fitBounds(L.latLngBounds(lls), { padding: [70, 70], maxZoom: MAX_CLUSTER_ZOOM }) })

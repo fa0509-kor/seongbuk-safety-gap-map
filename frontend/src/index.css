@@ -461,6 +461,27 @@ button:not(:disabled),select{
   color: white;
   font: 700 14px/1 'Noto Sans KR', sans-serif;
 }
+/* 묶음 원: 바깥 고리는 상태별 색 비율, 안쪽은 남색 숫자 원 (흰 선으로 고리와 구분) */
+.resident-cluster-ring span {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 6px;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .3);
+}
+.resident-cluster-ring b {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border: 2px solid white;
+  border-radius: 50%;
+  background: #001a47;
+  color: white;
+  font: 700 14px/1 'Noto Sans KR', sans-serif;
+}
 .resident-map-pin span {
   display: grid;
   place-items: center;
