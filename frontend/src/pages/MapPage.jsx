@@ -11,7 +11,7 @@ import { groupPoints, MAX_CLUSTER_ZOOM } from '../lib/cluster.js'
 // 주민 3 지도. 필터: 전체 / 주민 제보 / 조치 완료. 소방용수 '점검 필요' 점은 주민이 신경 쓰는 정보가 아니라(멘토 지적) 이 화면에서 뺐고 관리자 목록에만 남김 (docs/decisions.md). 하단 시트에 선택 항목 요약.
 // 배경 타일 설정은 lib/map.js (OSM 표준 타일, 출처 표기 필수)
 const CENTER = [37.5894, 127.0167]
-const COLORS = { received: '#001a47', review: '#a7430d', action: '#a7430d', done: '#166548' }
+const COLORS = { received: '#001a47', review: '#a7430d', action: '#a7430d', done: '#bfd300' }
 const FILTERS = [['all', '전체'], ['resident', '주민 제보'], ['done', '조치 완료']]
 const LEGEND = [['received', '접수'], ['review', '검토·조치 중'], ['done', '조치 완료']]
 // 멀리서 보면 가까운 제보를 숫자 원으로 묶고, 확대하면 낱개로 풀린다 (lib/cluster.js)
@@ -81,7 +81,7 @@ export default function MapPage() {
         // 조치 완료 뒤 '아직 그대로'라는 주민 의견이 더 많은 곳은 빨간 테두리로 표시
         const recheck = f.properties.recheck
         const icon = L.divIcon({
-          className: 'resident-map-pin', iconSize: [32, 32],
+          className: `resident-map-pin${f.properties.status === 'done' ? ' is-done' : ''}`, iconSize: [32, 32],
           html: `<span style="background:${f._color};border-color:${recheck ? '#dc2626' : '#fff'}"><img src="${residentAsset('home-imgPin.svg')}" alt=""></span>`,
         })
         L.marker([lat, lon], { icon, alt: f.properties.category ?? '주민 제보' })
