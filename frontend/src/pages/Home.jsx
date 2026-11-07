@@ -1,15 +1,20 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ResidentHeader, { residentAsset } from '../components/ResidentHeader.jsx'
+import BeforeAfter from '../components/BeforeAfter.jsx'
 import { api } from '../lib/api.js'
 
 export default function Home() {
   const [news, setNews] = useState(null)
+  const [photos, setPhotos] = useState(null) // 최근 조치 완료 제보의 조치 전·후 사진 (둘 다 있을 때만)
   const [error, setError] = useState(false)
   useEffect(() => {
     api.reportsMap().then(({ features }) => {
-      setNews(features.filter(({ properties }) => properties.status === 'done')
-        .sort((a, b) => b.properties.created_at.localeCompare(a.properties.created_at))[0]?.properties ?? null)
+      const latest = features.filter(({ properties }) => properties.status === 'done')
+        .sort((a, b) => b.properties.created_at.localeCompare(a.properties.created_at))[0]?.properties ?? null
+      setNews(latest)
+      // 조치 완료된 제보의 사진은 공개 대상이다 (지도의 조치 전·후 보기와 같다)
+      if (latest) api.report(latest.public_id).then((r) => setPhotos(r.photo_url && r.after_photo_url ? { before: r.photo_url, after: r.after_photo_url } : null)).catch(() => {})
     }).catch(() => setError(true))
   }, [])
 
@@ -38,6 +43,7 @@ export default function Home() {
           <span className="resident-chip bg-[#e5f4ec] text-[#166548]">조치 완료</span>
           <h3 className="mt-2 font-bold">{news.category ?? '주민 제보'} 조치 완료</h3>
           <p className="mt-2 text-xs text-sub">주민 제보로 발견한 위험을 정리했어요.</p>
+          {photos && <div className="mt-3"><BeforeAfter before={photos.before} after={photos.after} /></div>}
         </> : <p className="text-sm text-sub">{error ? '동네 소식을 불러오지 못했어요.' : '최근 조치 완료 소식이 여기에 표시돼요.'}</p>}
       </article>
     </section>
