@@ -12,6 +12,7 @@ export default function AdminIntegrated() {
   const el = useRef(null)
   const map = useRef(null)
   const layer = useRef(null)
+  const fitted = useRef('') // 마지막으로 지도 범위를 맞춘 필터. 같은 필터에서는 다시 맞추지 않는다 (주소를 눌러 확대한 상태 유지)
   const [rows, setRows] = useState([])
   const [address, setAddress] = useState('')
   const [selected, setSelected] = useState(null)
@@ -19,12 +20,20 @@ export default function AdminIntegrated() {
   const [kind, setKind] = useState('')
 
   useEffect(() => {
-    map.current = L.map(el.current).setView([37.5894, 127.0167], 13)
+    map.current = L.map(el.current, { zoomSnap: 0.25 }).setView([37.5894, 127.0167], 13) // 0.25 단위로 확대해 후보가 지도에 꽉 차게
     addBaseLayer(map.current)
     layer.current = L.layerGroup().addTo(map.current)
     api.adminIntegrated().then((g) => setRows(g.features)).catch(() => {})
     return () => map.current.remove()
   }, [])
+
+  // 후보를 고르면 (목록·지도 어느 쪽이든) 그 위치로 확대. 위쪽 설명 길이가 바뀌어 지도 크기도 다시 잰다
+  useEffect(() => {
+    if (!selected) return
+    const [lon, lat] = selected.geometry.coordinates
+    map.current.invalidateSize()
+    map.current.setView([lat, lon], 17)
+  }, [selected])
 
   const shown = useMemo(() => rows
     .filter((f) => f.properties.address.includes(address.trim()))
@@ -33,13 +42,22 @@ export default function AdminIntegrated() {
 
   useEffect(() => {
     layer.current.clearLayers()
+    const points = []
     shown.forEach((f) => {
       const [lon, lat] = f.geometry.coordinates
       const n = f.properties.kinds.length
-      L.circleMarker([lat, lon], { radius: 3 + n * 2, color: '#001A47', fillOpacity: 0.6, weight: 1 })
+      points.push([lat, lon])
+      L.circleMarker([lat, lon], { radius: 2 + n * 1.5, color: '#001A47', fillOpacity: 0.6, weight: 1 })
         .on('click', () => setSelected(f)).addTo(layer.current)
     })
-  }, [shown])
+    // 필터가 바뀌면 보이는 후보가 모두 지도 안에 들어오게 범위를 맞춘다
+    const key = `${address.trim()}|${need}|${kind}|${rows.length}`
+    if (points.length && fitted.current !== key) {
+      fitted.current = key
+      map.current.invalidateSize()
+      map.current.fitBounds(points, { padding: [16, 16], maxZoom: 16 })
+    }
+  }, [shown]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <section className="admin-page">
@@ -64,21 +82,21 @@ export default function AdminIntegrated() {
             <tbody>
               {shown.map((f) => (
                 <tr key={f.properties.address} className="border-t">
-                  <td className="p-2"><button type="button" className="text-left font-semibold underline" onClick={() => {
-                    setSelected(f)
-                    const [lon, lat] = f.geometry.coordinates
-                    map.current.setView([lat, lon], 17)
-                  }}>{f.properties.address}</button></td>
+                  <td className="p-2"><button type="button" className="text-left font-semibold underline" onClick={() => setSelected(f)}>{f.properties.address}</button></td>
                   <td>{f.properties.kinds.join(' · ')}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <div className="admin-panel grid content-start gap-3">
+        <div className="admin-panel integrated-side flex h-[480px] flex-col gap-3">
           <h2 className="font-bold">선택한 후보</h2>
-          {selected ? <><p className="font-bold">{selected.properties.address}</p><ul className="grid gap-2 text-sm">{selected.properties.kinds.map((k) => <li key={k} className="rounded bg-page p-2">{k} · 현장 확인 필요</li>)}</ul></> : <p className="text-sm text-sub">목록에서 주소를 선택하세요.</p>}
-          <div ref={el} className="h-52 overflow-hidden rounded-lg" aria-label="통합 점검 후보 지도" />
+          {selected ? <div className="grid gap-2">
+            <p className="font-bold">{selected.properties.address}</p>
+            <ul className="flex flex-wrap gap-1.5 text-xs">{selected.properties.kinds.map((k) => <li key={k} className="rounded bg-page px-2 py-1">{k}</li>)}</ul>
+            <p className="text-xs text-sub">모두 현장 확인 필요</p>
+          </div> : <p className="text-sm text-sub">목록이나 지도에서 주소를 선택하세요.</p>}
+          <div ref={el} className="min-h-[220px] flex-1 overflow-hidden rounded-lg" aria-label="통합 점검 후보 지도" />
         </div>
       </div>
     </section>
