@@ -81,20 +81,27 @@ export default function Report() {
     const list = [...files].slice(0, MAX_PHOTOS - photos.length)
     if (!list.length) return setError(`사진은 최대 ${MAX_PHOTOS}장까지 붙일 수 있어요.`)
     setError(''); setLastFiles(list); setUploading(true)
-    let uploaded = 0
-    try {
-      for (const file of list) {
-        const taken = await takenAt(file)
-        const blob = await resizeImage(file)
-        const quality = await checkPhotoQuality(blob) // 어둡거나 흔들렸는지 (경고만 함)
-        const up = await api.uploadPhoto(blob)
-        const draft = aiDraft(up.ai)
-        if (draft) setAiDrafted(true)
-        setPhotos((l) => (l.length >= MAX_PHOTOS ? l : [...l, { key: up.key, preview: URL.createObjectURL(blob), memo: draft, takenAt: taken, ai: up.ai, quality }]))
-        uploaded += 1
-      }
-      setLastFiles(null)
-    } catch (e) { setLastFiles(list.slice(uploaded)); setError(`사진 처리 실패: ${e.message}`) } finally { setUploading(false) }
+    // 사진마다 AI 판별이 몇 초씩 걸려서, 올리기는 동시에 시작하고 화면에는 선택한 순서대로 붙인다(대표 사진 순서 유지).
+    const work = async (file) => {
+      const taken = await takenAt(file)
+      const blob = await resizeImage(file)
+      const quality = await checkPhotoQuality(blob) // 어둡거나 흔들렸는지 (경고만 함)
+      const up = await api.uploadPhoto(blob)
+      return { key: up.key, preview: URL.createObjectURL(blob), memo: aiDraft(up.ai), takenAt: taken, ai: up.ai, quality }
+    }
+    const jobs = list.map((file) => work(file).then((photo) => ({ photo }), (error) => ({ error, file })))
+    const failed = []
+    let firstError = null
+    for (const job of jobs) {
+      const r = await job
+      if (r.photo) {
+        if (r.photo.memo) setAiDrafted(true)
+        setPhotos((l) => (l.length >= MAX_PHOTOS ? l : [...l, r.photo]))
+      } else { failed.push(r.file); firstError ??= r.error }
+    }
+    setLastFiles(failed.length ? failed : null)
+    if (failed.length) setError(`사진 처리 실패: ${firstError.message}`)
+    setUploading(false)
   }
   const setMemo = (i, v) => setPhotos((l) => l.map((p, k) => (k === i ? { ...p, memo: v } : p)))
   const removePhoto = (i) => setPhotos((l) => l.filter((_, k) => k !== i))                    // 대표를 지우면 다음 사진이 대표가 됨

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from fastapi.concurrency import run_in_threadpool
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.orm import Session
@@ -23,7 +24,8 @@ async def upload_photo(file: UploadFile = File(...), classify: bool = True, db: 
         raise HTTPException(400, str(e)) from e
     key = storage.new_key()
     storage.save(key, jpeg)
-    ai, provider = vision.classify(jpeg) if classify else (None, None)
+    # AI 호출은 몇 초 걸리는 동기 함수라, 그대로 부르면 서버가 그동안 다른 요청을 못 받는다(사진 여러 장이 줄을 선다). 스레드에서 돌린다.
+    ai, provider = await run_in_threadpool(vision.classify, jpeg) if classify else (None, None)
     photo = Photo(key=key, width=w, height=h, ai=ai, ai_provider=provider)
     db.add(photo)
     db.commit()
