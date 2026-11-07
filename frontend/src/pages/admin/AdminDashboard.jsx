@@ -21,10 +21,10 @@ function Screening({ s }) {
         <p className="my-3 flex flex-wrap items-baseline gap-2"><Link to="/admin/reports?source=gap" className="text-2xl font-bold">{s.targets}곳</Link>
           <span className="text-xs text-sub">전체 안전시설 {s.facilities_total.toLocaleString()}곳 중 {s.ratio_pct}%</span></p>
         <div className="flex justify-between text-sm"><span>현장 확인 완료 {s.targets_done}곳</span><span>{pct}%</span></div>
-        <progress value={pct} max="100" className="my-2 h-2 w-full accent-brand" aria-label="현장 확인 완료 비율" />
+        <div className="admin-bar my-2" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="현장 확인 완료 비율"><span style={{ width: `${pct}%` }} /></div>
         <p className="text-xs text-sub">공공데이터로 선별한 의심 대상입니다. 실제 위험 여부는 현장에서 확인하세요.</p>
       </div>
-      <div className="rounded-xl bg-slate-100 p-4">
+      <div className="rounded-xl border border-line bg-white p-4">
         <h3 className="mb-2 text-sm font-bold">유형별 점검 대상</h3>
         <dl className="grid gap-2 text-sm">
           {Object.entries(s.by_rule).map(([label, count]) => <div key={label} className="flex justify-between gap-2"><dt>{label}</dt><dd className="shrink-0">{count}곳</dd></div>)}
@@ -76,14 +76,21 @@ export default function AdminDashboard() {
       <div className="admin-priority-grid">
       <article className="admin-panel">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h2 className="font-bold">우선 점검 대상</h2><Link to="/admin/reports" className="admin-secondary">전체 목록 보기</Link></div>
-        <ul className="divide-y rounded-lg bg-white">
-          {top.map((r) => (
-            <li key={r.id} className="flex justify-between p-3">
-              <Link to={`/admin/reports/${r.id}`}>#{r.id} {r.gap_rule ?? r.ai?.category ?? '-'} · {r.source_label}</Link>
-              <span className={r.priority.overdue ? 'font-semibold text-danger' : ''}>{r.priority.total}점{r.priority.overdue && ' · 기한 초과'}</span>
-            </li>
-          ))}
-        </ul>
+        <table className="admin-priority-table w-full text-sm">
+          <thead><tr className="text-left text-[13px] text-sub">{['번호', '점검 내용', '우선순위', '처리 상태', '상세 보기'].map((h) => <th key={h} className="whitespace-nowrap px-3 py-2.5 font-medium">{h}</th>)}</tr></thead>
+          <tbody>
+            {top.map((r) => (
+              <tr key={r.id} className="border-t border-line">
+                <td className="whitespace-nowrap px-3 py-3 font-semibold">#{r.id}</td>
+                <td className="px-3 py-3 font-semibold">{r.gap_rule ?? r.ai?.category ?? '-'}<span className="ml-1 text-xs font-normal text-sub">· {r.source_label}</span></td>
+                <td className={`whitespace-nowrap px-3 py-3 ${r.priority.overdue ? 'font-semibold text-danger' : ''}`}>{r.priority.total}점{r.priority.overdue && ' · 기한 초과'}</td>
+                <td className="whitespace-nowrap px-3 py-3"><span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs">{r.status_label}</span></td>
+                <td className="whitespace-nowrap px-3 py-3"><Link to={`/admin/reports/${r.id}`} className="font-semibold text-brand">상세 보기 →</Link></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="mt-3 text-xs text-sub">접수 상태 · 규칙 점수순으로 정렬된 목록입니다.</p>
       </article>
       <aside className="admin-callout">
         <span className="grid size-11 place-items-center rounded-xl bg-accent"><img src="/admin-design/shield.svg" alt="" /></span>

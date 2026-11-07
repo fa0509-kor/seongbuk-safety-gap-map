@@ -594,3 +594,22 @@ button:not(:disabled),select{
   border-radius: inherit;
   resize: none;
 }
+
+/* 관리자 PC 화면을 피그마(관리자용 - PC)에 맞춘 보정 */
+.admin-badge { margin-left: 8px; padding: 1px 7px; border-radius: 999px; background: rgba(0, 26, 71, .12); font-size: 11px; font-weight: 700; }
+.admin-nav-link:not(.is-active) .admin-badge { background: rgba(255, 255, 255, .16); color: #fff; }
+.admin-avatar { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 999px; background: #e9ecf3; font-size: 11px; font-weight: 700; }
+.admin-chevron { color: #5b6477; }
+.admin-footer { display: flex; justify-content: space-between; gap: 16px; padding: 18px 32px 28px; font-size: 12px; color: #5b6477; }
+.admin-bar { height: 8px; width: 100%; border-radius: 999px; background: #e6e9f0; overflow: hidden; }
+.admin-bar > span { display: block; height: 100%; border-radius: 999px; background: #001a47; }
+.admin-bar.is-accent > span { background: #c0d500; }
+.admin-priority-table th, .admin-priority-table td { text-align: left; }
+@media (max-width: 767px) { .admin-footer { padding: 16px; flex-direction: column; } }
+.admin-filter .admin-field { display: grid; gap: 4px; font-size: 12px; color: #5b6477; }
+.admin-filter .admin-field > span { font-weight: 600; }
+.admin-pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: #5b6477; }
+.admin-pager button { min-width: 32px; height: 32px; padding: 0 8px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #1b2538; }
+.admin-pager button.is-current { background: #001a47; color: #fff; font-weight: 700; }
+.admin-pager button:disabled { opacity: .35; }
+@media (max-width: 767px) { .admin-list-table td[data-label="선택"] { display: none; } }

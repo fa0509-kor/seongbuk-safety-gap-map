@@ -23,6 +23,8 @@ export default function AdminIntegrated() {
   const [need, setNeed] = useState(2)
   const [kind, setKind] = useState('')
   const [zoom, setZoom] = useState(13) // 확대·축소할 때마다 묶음을 다시 계산
+  const [checked, setChecked] = useState(() => new Set()) // 선택한 후보에서 확인을 마친 시설 (화면 표시용, 저장하지 않음)
+  const [planMsg, setPlanMsg] = useState('')
 
   useEffect(() => {
     map.current = L.map(el.current, { zoomSnap: 0.25 }).setView([37.5894, 127.0167], 13) // 0.25 단위로 확대해 후보가 지도에 꽉 차게
@@ -42,7 +44,7 @@ export default function AdminIntegrated() {
   }, [])
 
   // 고른 후보는 지도 크기 감시보다 먼저 기록해 둔다 (고른 뒤에 전체 범위로 되돌아가지 않게)
-  useLayoutEffect(() => { picked.current = selected }, [selected])
+  useLayoutEffect(() => { picked.current = selected; setChecked(new Set()); setPlanMsg('') }, [selected])
 
   // 후보를 고르면 (목록·지도 어느 쪽이든) 그 위치로 확대. 위쪽 설명 길이가 바뀌어 지도 크기도 다시 잰다
   useEffect(() => {
@@ -112,19 +114,38 @@ export default function AdminIntegrated() {
             </tbody>
           </table>
         </div>
-        <div className="admin-panel integrated-side flex h-[480px] flex-col gap-3">
-          <h2 className="font-bold">선택한 후보</h2>
-          {selected ? <div className="grid gap-2">
-            <p className="font-bold">{selected.properties.address}</p>
-            <ul className="flex flex-wrap gap-1.5 text-xs">{selected.properties.kinds.map((k) => <li key={k} className="rounded bg-page px-2 py-1">{k}</li>)}</ul>
-            <p className="text-xs text-sub">모두 현장 확인 필요</p>
-          </div> : <p className="text-sm text-sub">목록이나 지도에서 주소를 선택하세요.</p>}
-          <div className="integrated-map relative min-h-[220px] flex-1">
-            <div ref={el} className="absolute inset-0 overflow-hidden rounded-lg" aria-label="통합 점검 후보 지도" />
-            <span className="resident-chip pointer-events-none absolute left-14 top-3 z-[500] bg-white text-xs">
-              {zoom < MAX_CLUSTER_ZOOM ? '축소 · 후보 묶음' : '확대 · 개별 위치'}
-            </span>
+        <div className="admin-panel integrated-side flex h-[480px] flex-col gap-3 overflow-y-auto">
+          <div className="flex items-start justify-between gap-2">
+            <h2 className="font-bold">선택한 후보</h2>
+            {selected && <span className="rounded bg-accent px-2 py-0.5 text-xs font-bold text-brand">{selected.properties.kinds.length}종</span>}
           </div>
+          {selected ? <>
+            <p className="text-lg font-bold">{selected.properties.address}</p>
+            <div>
+              <h3 className="mb-1.5 text-sm font-bold">함께 확인할 시설</h3>
+              <ul className="grid gap-2">
+                {selected.properties.kinds.map((k) => <li key={k}>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <input type="checkbox" checked={checked.has(k)} onChange={(e) => setChecked((cur) => { const n = new Set(cur); e.target.checked ? n.add(k) : n.delete(k); return n })} />
+                    <span className="rounded bg-page px-2 py-1 text-xs font-semibold">{k}</span>
+                    <span className="ml-auto text-xs text-sub">{checked.has(k) ? '확인 표시함' : '현장 확인 필요'}</span>
+                  </label>
+                </li>)}
+              </ul>
+            </div>
+            <p className="rounded-lg bg-page p-3 text-xs text-sub">주소가 같아도 진입 위치는 다를 수 있습니다. 시설별 위치와 운영 상태를 현장에서 확인하세요.</p>
+            <button type="button" className="admin-action w-full" onClick={() => setPlanMsg('점검 계획을 저장하는 기능은 아직 없습니다. 지금은 확인할 시설을 표시해 두는 용도입니다.')}>이 주소의 점검 계획 만들기</button>
+            {planMsg && <p className="text-xs text-sub" role="status">{planMsg}</p>}
+          </> : <p className="text-sm text-sub">목록이나 지도에서 주소를 선택하세요.</p>}
+        </div>
+      </div>
+      <div className="admin-panel integrated-map-panel">
+        <h2 className="mb-2 font-bold">후보 지도</h2>
+        <div className="integrated-map relative h-[360px]">
+          <div ref={el} className="absolute inset-0 overflow-hidden rounded-lg" aria-label="통합 점검 후보 지도" />
+          <span className="resident-chip pointer-events-none absolute left-14 top-3 z-[500] bg-white text-xs">
+            {zoom < MAX_CLUSTER_ZOOM ? '축소 · 후보 묶음' : '확대 · 개별 위치'}
+          </span>
         </div>
       </div>
     </section>

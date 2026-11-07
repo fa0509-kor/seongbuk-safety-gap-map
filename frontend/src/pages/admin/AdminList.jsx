@@ -10,16 +10,28 @@ const STATUSES = { '': '전체 상태', received: '접수', review: '검토', ac
 const SEASONS = { '': '전체 시기', 해빙기: '해빙기(2~3월)', 우기: '우기(5~6월)', 동절기: '동절기(11~12월)' }
 const CATEGORIES = ['', '콘크리트 균열', '박리', '백태/누수', '철근 노출', '기타']
 
+// 쪽 번호: 1 2 3 4 5 … 마지막 (현재 쪽 주변만 보여준다)
+function pageNumbers(cur, last) {
+  if (last < 6) return Array.from({ length: last + 1 }, (_, i) => i)
+  const set = new Set([0, last, cur - 1, cur, cur + 1].filter((n) => n >= 0 && n <= last))
+  if (cur < 3) [0, 1, 2, 3, 4].forEach((n) => set.add(n))
+  const out = []
+  ;[...set].sort((a, b) => a - b).forEach((n, i, arr) => { if (i && n - arr[i - 1] > 1) out.push('…'); out.push(n) })
+  return out
+}
+
 export default function AdminList() {
   const [params, setParams] = useSearchParams()
   const [screening, setScreening] = useState(null)
   const [rows, setRows] = useState([])
   const [search, setSearch] = useState(params.get('search') ?? '')
   const [page, setPage] = useState(0)
+  const [picked, setPicked] = useState(() => new Set()) // 체크박스로 고른 번호 (지금은 표시만, 일괄 처리 기능은 없음)
   const dialog = useRef(null)
   const pageSize = 8
   const lastPage = Math.max(0, Math.ceil(rows.length / pageSize) - 1)
   const currentPage = Math.min(page, lastPage)
+  const shown = rows.slice(currentPage * pageSize, (currentPage + 1) * pageSize)
   const [msg, setMsg] = useState('')
   const filters = Object.fromEntries([...params].filter(([, v]) => v))
 
@@ -78,20 +90,23 @@ export default function AdminList() {
         ['사전 점검 대상', `${screening.targets}곳`, '공공데이터 기반 현장 확인 대상'],
         ...Object.entries(screening.by_rule).slice(0, 3).map(([rule, count]) => [rule, `${count}곳`, '현장 확인 필요']),
       ]} /></div>}
-      <form className="admin-panel flex flex-wrap items-center gap-2" onSubmit={(e) => { e.preventDefault(); set('search', search.trim()) }}>
-        <input type="search" aria-label="점검 대상 검색" placeholder="번호 또는 점검 내용 검색" value={search} onChange={(e) => setSearch(e.target.value)} />
-
-        {select('source', SOURCES)}
-        {select('status', STATUSES)}
-        {select('category', Object.fromEntries(CATEGORIES.map((c) => [c, c || '전체 유형'])))}
-        {select('season', SEASONS)}
-        <button type="button" className="admin-secondary" onClick={() => { setSearch(''); setParams({}) }}>초기화</button>
-        <button type="submit" className="admin-action">검색</button>
+      <form className="admin-panel admin-filter" onSubmit={(e) => { e.preventDefault(); set('search', search.trim()) }}>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="admin-field grow"><span>검색어</span>
+            <input type="search" aria-label="점검 대상 검색" placeholder="번호 또는 점검 내용 검색" value={search} onChange={(e) => setSearch(e.target.value)} /></label>
+          <label className="admin-field"><span>출처</span>{select('source', SOURCES)}</label>
+          <label className="admin-field"><span>처리 상태</span>{select('status', STATUSES)}</label>
+          <label className="admin-field"><span>점검 유형</span>{select('category', Object.fromEntries(CATEGORIES.map((c) => [c, c || '전체 유형'])))}</label>
+          <label className="admin-field"><span>시기</span>{select('season', SEASONS)}</label>
+          <button type="button" className="admin-secondary" onClick={() => { setSearch(''); setParams({}) }}>초기화</button>
+          <button type="submit" className="admin-action">검색</button>
+        </div>
+        <p className="mt-2 text-xs text-sub">출처: 주민 신고 · 공백 탐지 · CCTV / 상태: 접수 → 검토 → 조치 → 완료</p>
       </form>
       {msg && <p className="text-sm text-sub">{msg}</p>}
       <div className="overflow-x-auto rounded-xl border border-line bg-white">
         <div className="flex flex-wrap items-center justify-between gap-2 p-4">
-          <h2 className="font-bold">전체 대상 {rows.length}건</h2>
+          <h2 className="font-bold">전체 대상 {rows.length}건{picked.size > 0 && <span className="ml-2 text-sm font-normal text-sub">{picked.size}건 선택</span>}</h2>
           <div className="flex flex-wrap gap-2">
             {select('sort', { priority: '우선순위순', new: '최신순', old: '오래된순' })}
             <button type="button" className="admin-secondary" onClick={() => dialog.current.showModal()}>↓ 엑셀 내려받기</button>
@@ -100,12 +115,14 @@ export default function AdminList() {
         <table className="admin-list-table w-full text-sm">
           <thead>
             <tr className="border-b border-line text-left text-[13px] font-medium text-sub">
+              <th className="w-10 px-3.5 py-3"><input type="checkbox" aria-label="이 쪽 전체 선택" checked={shown.length > 0 && shown.every((r) => picked.has(r.id))} onChange={(e) => setPicked((cur) => { const n = new Set(cur); shown.forEach((r) => (e.target.checked ? n.add(r.id) : n.delete(r.id))); return n })} /></th>
               {['우선순위', '번호', '접수', '출처', '유형·규칙', 'AI 신뢰도', '담당', '주민 확인', '상태', '기한', '상세', '오탐'].map((h) => <th key={h} className="whitespace-nowrap px-3.5 py-3 font-medium">{h}</th>)}
             </tr>
           </thead>
           <tbody>
-            {rows.slice(currentPage * pageSize, (currentPage + 1) * pageSize).map((r) => (
+            {shown.map((r) => (
               <tr key={r.id} className="border-b border-gray-100 last:border-0 hover:bg-blue-50/50">
+                <td data-label="선택" className="px-3.5"><input type="checkbox" aria-label={`#${r.id} 선택`} checked={picked.has(r.id)} onChange={(e) => setPicked((cur) => { const n = new Set(cur); e.target.checked ? n.add(r.id) : n.delete(r.id); return n })} /></td>
                 <td data-label="우선순위" className="whitespace-nowrap px-3.5 py-3.5 font-bold">{r.priority.total}</td>
                 <td data-label="번호" className="whitespace-nowrap px-3.5"><Link to={`/admin/reports/${r.id}`} className="font-semibold text-brand">#{r.id}</Link></td>
                 <td data-label="접수" className="whitespace-nowrap px-3.5 text-sub">{new Date(r.created_at).toLocaleString('ko-KR')}{r.photo_age_days > 0 && <span className={`block text-xs ${r.stale_photo ? 'font-semibold text-amber-700' : 'text-gray-400'}`}>사진은 {r.photo_age_days}일 전 촬영</span>}</td>
@@ -135,10 +152,15 @@ export default function AdminList() {
           </tbody>
         </table>
       </div>
-      {lastPage > 0 && <nav aria-label="점검 목록 페이지" className="flex items-center justify-center gap-3 text-sm">
-        <button className="admin-secondary" type="button" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>이전</button>
-        <span>{currentPage + 1} / {lastPage + 1}</span>
-        <button className="admin-secondary" type="button" disabled={currentPage === lastPage} onClick={() => setPage(currentPage + 1)}>다음</button>
+      {rows.length > 0 && <nav aria-label="점검 목록 페이지" className="admin-pager">
+        <span>총 {rows.length}건 중 {currentPage * pageSize + 1}-{Math.min(rows.length, (currentPage + 1) * pageSize)}건</span>
+        {lastPage > 0 && <div className="flex items-center gap-1">
+          <button type="button" aria-label="이전 쪽" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>‹</button>
+          {pageNumbers(currentPage, lastPage).map((n, i) => n === '…'
+            ? <span key={`gap${i}`} className="px-1 text-sub">…</span>
+            : <button type="button" key={n} aria-current={n === currentPage ? 'page' : undefined} className={n === currentPage ? 'is-current' : ''} onClick={() => setPage(n)}>{n + 1}</button>)}
+          <button type="button" aria-label="다음 쪽" disabled={currentPage === lastPage} onClick={() => setPage(currentPage + 1)}>›</button>
+        </div>}
       </nav>}
       <dialog ref={dialog} aria-labelledby="ledger-title" className="admin-dialog">
         <h2 id="ledger-title" className="text-xl font-bold">점검 대상 엑셀 내려받기</h2>

@@ -24,11 +24,15 @@ function Table({ title, data }) {
 function Distribution({ title, data, accent = false }) {
   const rows = Object.entries(data ?? {})
   const max = Math.max(1, ...rows.map(([, count]) => count))
+  const total = rows.reduce((sum, [, count]) => sum + count, 0) || 1
   return <section className="admin-panel">
     <h2 className="mb-4 font-bold">{title}</h2>
     {rows.length ? <dl className="grid gap-3">
-      {rows.map(([label, count]) => <div key={label} className="grid grid-cols-[minmax(0,1fr)_minmax(48px,1fr)_auto] items-center gap-3 text-sm">
-        <dt>{label}</dt><dd><progress max={max} value={count} aria-label={label} className={`h-2 w-full ${accent ? 'accent-accent' : 'accent-brand'}`} /></dd><dd>{count}{accent ? '곳' : '건'}</dd>
+      {rows.map(([label, count]) => <div key={label} className="grid grid-cols-[minmax(0,1fr)_minmax(48px,1.4fr)_auto_auto] items-center gap-3 text-sm">
+        <dt>{label}</dt>
+        <dd><div className={`admin-bar ${accent ? 'is-accent' : ''}`} role="img" aria-label={`${label} ${count}`}><span style={{ width: `${Math.max(2, (count / max) * 100)}%` }} /></div></dd>
+        <dd className="text-right font-semibold">{count}{accent ? '곳' : '건'}</dd>
+        {!accent && <dd className="w-12 text-right text-xs text-sub">{((count / total) * 100).toFixed(1)}%</dd>}
       </div>)}
     </dl> : <p className="text-sm text-sub">해당 기간의 항목이 없어요.</p>}
   </section>

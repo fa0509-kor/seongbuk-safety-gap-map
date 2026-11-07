@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
+import { api } from '../../lib/api.js'
 
 const NAV = [
   ['/admin', '대시보드', '현황', 'dashboard'],
@@ -17,6 +19,8 @@ const PAGES = {
 export default function AdminLayout() {
   const { pathname } = useLocation()
   const [title, description] = PAGES[pathname] ?? ['점검 대상 상세', '위치와 담당 부서, 처리 내용을 확인하세요.']
+  const [listCount, setListCount] = useState(null) // 메뉴 '점검 대상 목록' 옆 건수
+  useEffect(() => { api.adminReports().then((rows) => setListCount(rows.length)).catch(() => {}) }, [pathname])
   const section = pathname === '/admin/map' || pathname.startsWith('/admin/reports/') ? '/admin/reports' : pathname
 
   return <div className="admin-shell">
@@ -27,7 +31,7 @@ export default function AdminLayout() {
           <Link key={path} to={path} aria-current={section === path ? 'page' : undefined}
             className={`admin-nav-link ${section === path ? 'is-active' : ''}`}>
             <img src={`/admin-design/${icon}.svg`} alt="" />
-            <span className="admin-desktop-label">{label}</span>
+            <span className="admin-desktop-label">{label}{path === '/admin/reports' && listCount != null && <b className="admin-badge">{listCount}</b>}</span>
             <span className="admin-mobile-label">{mobile}</span>
           </Link>)}
       </nav>
@@ -39,13 +43,14 @@ export default function AdminLayout() {
     <div className="admin-workspace">
       <header className="admin-header print:hidden">
         <div className="admin-breadcrumb"><Link to="/admin">관리자 홈</Link><span>/</span><strong>{title}</strong></div>
-        <div className="admin-account"><Link to="/admin/reports?status=received" aria-label="접수된 점검 대상"><img src="/admin-design/bell.svg" alt="" /></Link><span>관리자</span></div>
+        <div className="admin-account"><Link to="/admin/reports?status=received" aria-label="접수된 점검 대상"><img src="/admin-design/bell.svg" alt="" /></Link><span className="admin-avatar" aria-hidden="true">관</span><span>관리자</span><span className="admin-chevron" aria-hidden="true">⌄</span></div>
         <div className="admin-mobile-heading">
           <Link to="/admin"><img src="/admin-design/logo-mobile.png" alt="안전캐치" width="46" height="46" /></Link>
           <div><strong>{title}</strong><p>{description}</p></div>
         </div>
       </header>
       <main className="admin-content"><Outlet /></main>
+      <footer className="admin-footer print:hidden"><span>안전캐치</span><span>공공데이터 분석 결과는 현장 확인 후 확정됩니다.</span></footer>
     </div>
   </div>
 }
