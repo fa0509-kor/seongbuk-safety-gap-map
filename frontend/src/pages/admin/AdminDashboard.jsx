@@ -94,7 +94,6 @@ export default function AdminDashboard() {
         <Link to="/admin/integrated" className="mt-4 block rounded-lg bg-accent p-2.5 text-center text-sm font-bold text-brand">통합 점검 후보 확인 →</Link>
       </aside>
       </div>
-      <RewardRequests />
     </section>
   )
 }
