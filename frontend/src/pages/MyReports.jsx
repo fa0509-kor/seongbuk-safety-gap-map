@@ -94,12 +94,12 @@ export default function MyReports() {
         const compare = r.photo_url && r.after_photo_url // 조치 후 사진이 올라오면 완료 처리 전이라도 바로 전·후를 비교해 볼 수 있게
         return (
           <article key={r.public_id} className="resident-card flex flex-col gap-3.5">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col items-start gap-2">
+              <span className={`rounded-full px-2.5 py-0.5 text-[13px] font-semibold ${chip(r.status, r.not_target)}`}>{r.not_target ? '처리 대상 아님' : (r.status_label ?? r.status)}</span>
               <div className="flex flex-col gap-0.5">
-                <span className="text-base font-semibold">{r.ai?.category ?? '분류 없음'}{r.facility_label && ` · ${r.facility_label}`}</span>
+                <span className="text-lg font-bold leading-snug">{r.ai?.category ?? '분류 없음'}{r.facility_label && ` · ${r.facility_label}`}</span>
                 <span className="text-[13px] text-sub">{new Date(r.created_at).toLocaleDateString('ko-KR')} · 접수번호 {r.public_id}</span>
               </div>
-              <span className={`rounded-full px-2.5 py-0.5 text-[13px] font-semibold ${chip(r.status, r.not_target)}`}>{r.not_target ? '처리 대상 아님' : (r.status_label ?? r.status)}</span>
             </div>
             {r.not_target
               ? <p className="rounded-lg bg-page px-3 py-2.5 text-sm leading-normal">담당자가 확인한 결과, 처리 대상이 아니라고 판단했습니다.{r.dept_note ? ` 이유: ${r.dept_note}` : ' 이유는 담당 부서에 문의해 주세요.'}</p>
@@ -136,8 +136,12 @@ export default function MyReports() {
                 {voteMsg[r.public_id] && <p className="text-[13px] text-sub">{voteMsg[r.public_id]}</p>}
               </div>
             )}
-            {r.dept && <p className="text-[13px] text-sub">담당: {r.dept}</p>}
-            {!r.not_target && r.dept_note && <p className="rounded-lg bg-page px-3 py-2.5 text-sm leading-normal">{r.dept_note}</p>}
+            {(r.dept || (!r.not_target && r.dept_note)) && (
+              <div className="rounded-lg bg-page px-3 py-2.5 text-sm leading-normal">
+                <p className="text-[13px] font-semibold text-sub">담당 부서{r.dept && ` · ${r.dept}`}</p>
+                {!r.not_target && r.dept_note && <p className="mt-1">{r.dept_note}</p>}
+              </div>
+            )}
             {timeline(r).length > 0 && (
               <details className="text-sm">
                 <summary className="cursor-pointer py-1 font-medium text-brand">처리 이력 보기</summary>
