@@ -172,7 +172,7 @@ def _moderate_openai(jpeg: bytes) -> str:
 def _moderate_anthropic(jpeg: bytes) -> str:
     import anthropic
     resp = anthropic.Anthropic().messages.create(
-        model=config.ANTHROPIC_VISION_MODEL, max_tokens=300,
+        model=config.ANTHROPIC_MODERATION_MODEL, max_tokens=300,
         messages=[{"role": "user", "content": [
             {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": base64.b64encode(jpeg).decode()}},
             {"type": "text", "text": MODERATION_PROMPT}]}])
