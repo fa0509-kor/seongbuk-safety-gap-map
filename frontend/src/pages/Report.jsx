@@ -5,6 +5,7 @@ import { toPolite } from '../lib/politeKo.js'
 import AIResultCard from '../components/AIResultCard.jsx'
 import NearbyReports from '../components/NearbyReports.jsx'
 import PhotoGuide from '../components/PhotoGuide.jsx'
+import PhotoModal from '../components/PhotoModal.jsx'
 import PinPicker from '../components/PinPicker.jsx'
 import { takenAt } from '../lib/exif.js'
 import { api } from '../lib/api.js'
@@ -34,6 +35,8 @@ export default function Report() {
   const navigate = useNavigate()
   const [index, setIndex] = useState(null)
   const [editingLocation, setEditingLocation] = useState(false)
+  const [bigMap, setBigMap] = useState(false)     // 위치 지도를 크게 볼 때
+  const [viewer, setViewer] = useState(null)     // 사진을 눌러 크게 볼 때 {src, title}
   const [photos, setPhotos] = useState([])   // [{key, preview, memo, takenAt, ai}] 최대 4장, 0번이 대표
   const [pos, setPos] = useState(null)       // 제보에 쓸 위치 (핀으로 바꿀 수 있음)
   const [locState, setLocState] = useState('finding') // finding / auto / manual / failed
@@ -151,6 +154,18 @@ export default function Report() {
   }
   return (
     <section className="resident-screen min-h-full">
+      <PhotoModal src={viewer?.src} title={viewer?.title} onClose={() => setViewer(null)} />
+      {bigMap && pos && (
+        <div role="dialog" aria-modal="true" aria-label="내 위치 지도" className="fixed inset-0 z-[3000] flex flex-col gap-3 bg-[#0b1220] p-4">
+          <div className="flex items-center justify-between text-white">
+            <p className="text-sm">핀이 제보 위치예요. 지도를 끌거나 확대해서 주변을 볼 수 있어요.</p>
+            <button type="button" onClick={() => setBigMap(false)} className="h-11 shrink-0 rounded-lg bg-white px-4 text-sm font-semibold text-ink">닫기</button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-hidden rounded-lg bg-white"><PinPicker key="big" value={pos} viewOnly /></div>
+          <p className="text-center text-xs text-white">{pos.lat.toFixed(5)}, {pos.lon.toFixed(5)}{pos.accuracy ? ` · 오차 약 ${Math.round(pos.accuracy)}m` : ''}</p>
+          <p className="text-center text-xs text-white/80">위치를 바꾸려면 닫고 "위치 수정"을 눌러 주세요.</p>
+        </div>
+      )}
       <ResidentHeader caption={photo ? '‹ 제보하기 / 2단계' : '‹ 제보하기 / 1단계'}
         title={photo ? `사진 ${index + 1} 확인하기` : '사진으로 제보하기'} />
       {photo ? <>
@@ -159,7 +174,9 @@ export default function Report() {
             사진 {index + 1} / {photos.length}
             {index === 0 && <span className="resident-chip bg-[#ebefcb]">대표 사진</span>}
           </div>
-          <img src={photo.preview} alt="선택한 제보 사진" className="h-[102px] w-full rounded-xl object-cover" />
+          <button type="button" onClick={() => setViewer({ src: photo.preview, title: `사진 ${index + 1}` })} aria-label={`사진 ${index + 1} 크게 보기`} className="block w-full">
+            <img src={photo.preview} alt="선택한 제보 사진" className="h-[102px] w-full rounded-xl object-cover" />
+          </button>
         </div>
         <div className="resident-card grid gap-2">
           <div className="flex items-center justify-between text-sm font-bold">위치
@@ -168,7 +185,12 @@ export default function Report() {
           </div>
           {editingLocation
             ? <PinPicker key="edit" value={pos} onChange={(p) => { setPos(p); setLocState('manual') }} />
-            : pos && <PinPicker key="preview" value={pos} readOnly />}
+            : pos && <div className="relative">
+                <PinPicker key="preview" value={pos} readOnly />
+                <button type="button" onClick={() => setBigMap(true)} aria-label="내 위치 지도 크게 보기" className="absolute inset-0 z-[500] grid place-items-end rounded-lg p-1.5">
+                  <span className="rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold shadow">크게 보기</span>
+                </button>
+              </div>}
           <p className="text-xs text-sub">{pos ? `${pos.lat.toFixed(5)}, ${pos.lon.toFixed(5)} · 제보 공통 위치` : locText}</p>
         </div>
         <fieldset disabled={locked} className="resident-card grid gap-2">
@@ -229,7 +251,9 @@ export default function Report() {
           {draftBack && <p className="text-xs text-sub">쓰던 제보를 불러왔어요.</p>}
           <div className="grid grid-cols-2 gap-2.5">
             {photos.map((item, i) => <div key={item.key} className="relative">
-              <img src={item.preview} alt={`선택한 사진 ${i + 1}`} className="h-[102px] w-full rounded-xl object-cover" />
+              <button type="button" onClick={() => setViewer({ src: item.preview, title: `사진 ${i + 1}${i === 0 ? ' (대표)' : ''}` })} aria-label={`사진 ${i + 1} 크게 보기`} className="block w-full">
+                <img src={item.preview} alt={`선택한 사진 ${i + 1}`} className="h-[102px] w-full rounded-xl object-cover" />
+              </button>
               <button type="button" disabled={locked} aria-label={`${i + 1}번 사진 삭제`} onClick={() => removePhoto(i)}
                 className="absolute right-1 top-1 grid size-8 place-items-center rounded-full bg-white text-lg">×</button>
               {i === 0 ? <p className="text-xs font-bold">대표 사진</p> :

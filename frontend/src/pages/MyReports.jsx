@@ -2,6 +2,7 @@ import ResidentHeader, { residentAsset } from '../components/ResidentHeader.jsx'
 import { useEffect, useRef, useState } from 'react'
 import BeforeAfter from '../components/BeforeAfter.jsx'
 import ClientIdBox from '../components/ClientIdBox.jsx'
+import PhotoModal from '../components/PhotoModal.jsx'
 import StatusSteps from '../components/StatusSteps.jsx'
 import { api } from '../lib/api.js'
 import { formatTaken } from '../lib/exif.js'
@@ -15,6 +16,7 @@ const REFRESH_MS = 15000
 
 export default function MyReports() {
   const [list, setList] = useState(null)
+  const [viewer, setViewer] = useState(null) // 사진을 눌러 크게 볼 때 {src, title}
   const [error, setError] = useState('')
   const [voteMsg, setVoteMsg] = useState({})
   const loaded = useRef(false)
@@ -79,6 +81,7 @@ export default function MyReports() {
   const chip = (st, notTarget) => (notTarget ? 'bg-gray-200 text-sub' : st === 'done' ? 'bg-[#EBEFCB] text-brand' : st === 'received' ? 'bg-gray-200 text-ink' : 'bg-amber-100 text-amber-800')
   return (
     <section className="resident-screen">
+      <PhotoModal src={viewer?.src} title={viewer?.title} onClose={() => setViewer(null)} />
       <ResidentHeader caption="접수부터 완료까지" title="내 제보" />
       <div className="relative min-h-[129px] overflow-hidden rounded-[20px] bg-[#ebefcb] p-4">
         <img src={residentAsset('my-img.png')} alt="" className="absolute right-3 top-2 size-[112px] object-contain" />
@@ -111,11 +114,13 @@ export default function MyReports() {
             <div className="grid grid-cols-2 gap-2">
               {photos.filter((_, i) => !(compare && i === 0)).map((p, i) => (
                 <figure key={p.photo_url} className="flex flex-col gap-1">
-                  <img src={p.photo_url} alt={`제보 사진 ${i + 1}`} className="h-24 w-full rounded-lg object-cover" />
+                  <button type="button" onClick={() => setViewer({ src: p.photo_url, title: `제보 사진 ${i + 1}` })} aria-label={`제보 사진 ${i + 1} 크게 보기`} className="block w-full">
+                    <img src={p.photo_url} alt={`제보 사진 ${i + 1}`} className="h-24 w-full rounded-lg object-cover" />
+                  </button>
                   <figcaption className="text-[13px] leading-snug text-sub">{p.taken_at ? `촬영 ${formatTaken(p.taken_at)}` : '제보 사진'}{p.memo && <span className="block text-ink">{p.memo}</span>}</figcaption>
                 </figure>
               ))}
-              {!compare && r.after_photo_url && <figure className="flex flex-col gap-1"><img src={r.after_photo_url} alt="조치 후 사진" className="h-24 w-full rounded-lg object-cover" /><figcaption className="text-[13px] text-sub">조치 후 사진</figcaption></figure>}
+              {!compare && r.after_photo_url && <figure className="flex flex-col gap-1"><button type="button" onClick={() => setViewer({ src: r.after_photo_url, title: '조치 후 사진' })} aria-label="조치 후 사진 크게 보기" className="block w-full"><img src={r.after_photo_url} alt="조치 후 사진" className="h-24 w-full rounded-lg object-cover" /></button><figcaption className="text-[13px] text-sub">조치 후 사진</figcaption></figure>}
             </div>
             {r.status === 'done' && !r.not_target && (
               <div className="flex flex-col gap-2 rounded-lg bg-page p-3">
