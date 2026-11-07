@@ -58,7 +58,10 @@ export default function AdminDashboard() {
 
   return (
     <section className="dashboard-page flex flex-col gap-6">
-      <div><p className="eyebrow">SEONGBUK SAFETY MAP</p><h1 className="text-2xl font-bold">우리 동네 안전 현황</h1><p className="mt-2 text-sm text-sub">주민 제보와 데이터 점검 대상을 한곳에서 확인하세요.</p></div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="admin-page-heading"><h1>안전 점검 대시보드</h1><p>성북구의 안전 공백을 확인하고, 우선순위에 따라 현장 점검을 진행하세요.</p></div>
+        <Link to="/admin/report" className="admin-secondary">↓ 보고서 보기</Link>
+      </div>
       {newCount > 0 && (
         <div className="rounded bg-amber-50 p-3 text-sm">접수 대기 제보 {newCount}건 · <Link to="/admin/reports?status=received" className="underline">확인하기</Link></div>
       )}
@@ -66,14 +69,15 @@ export default function AdminDashboard() {
         <div className="rounded bg-amber-50 p-3 text-sm">조치 후 관리 · 아직 그대로라는 의견 {ac.reopened}건 · 재발 {ac.recurred}건 · 재점검 필요 {ac.recheck_due}건</div>
       )}
       <FirstReviewCard fr={summary?.first_review} />
-      <Screening s={summary?.screening} />
       <div className="dashboard-stats grid grid-cols-5 gap-3">
         {cards.map(([k, v]) => (
           <div key={k} className="rounded-lg bg-white p-4 shadow-sm"><div className="break-keep text-sm text-gray-500">{k}</div><div className="break-keep text-2xl font-semibold">{v ?? '—'}</div></div>
         ))}
       </div>
-      <div>
-        <h2 className="mb-2 font-semibold">우선순위 상위 (접수 상태, 규칙 점수순)</h2>
+      <Screening s={summary?.screening} />
+      <div className="admin-priority-grid">
+      <article className="admin-panel">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h2 className="font-bold">우선 점검 대상</h2><Link to="/admin/reports" className="admin-secondary">전체 목록 보기</Link></div>
         <ul className="divide-y rounded-lg bg-white">
           {top.map((r) => (
             <li key={r.id} className="flex justify-between p-3">
@@ -82,7 +86,15 @@ export default function AdminDashboard() {
             </li>
           ))}
         </ul>
+      </article>
+      <aside className="admin-callout">
+        <span className="grid size-11 place-items-center rounded-xl bg-accent"><img src="/admin-design/shield.svg" alt="" /></span>
+        <h2 className="mt-4 font-bold">데이터 확인에서<br />현장 안전까지</h2>
+        <p className="mt-2 text-sm">공공데이터를 바탕으로 확인이 필요한 곳부터 점검하세요.</p>
+        <Link to="/admin/integrated" className="mt-4 block rounded-lg bg-accent p-2.5 text-center text-sm font-bold text-brand">통합 점검 후보 확인 →</Link>
+      </aside>
       </div>
+      <RewardRequests />
     </section>
   )
 }

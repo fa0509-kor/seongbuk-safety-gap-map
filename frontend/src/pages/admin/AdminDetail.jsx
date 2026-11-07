@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import AIResultCard from '../../components/AIResultCard.jsx'
@@ -39,11 +40,11 @@ export default function AdminDetail() {
 
   if (!r) return <p>{msg || '불러오는 중…'}</p>
   return (
-    <section className="flex flex-col gap-4">
-      <h1 className="text-xl font-bold">#{r.id} · {r.source_label} · {r.status_label}</h1>
+    <section className="admin-page">
+      <div className="admin-page-heading"><h1>점검 대상 상세</h1><p>#{r.id} · {r.gap_rule ?? r.ai?.category ?? r.source_label} · {r.status_label}</p></div>
       <div className="detail-grid grid grid-cols-3 gap-4">
         <div className="rounded-lg bg-white p-4">
-          <h2 className="mb-2 font-semibold">AI가 본 것</h2>
+          <h2 className="mb-2 font-semibold">{r.gap_rule ?? "AI 판별 결과"}</h2>
           {r.photo_url && <img src={r.photo_url} alt="제보 사진" className="mb-2 rounded" />}
           {(r.photos ?? []).length > 0 && (
             <ul className="mb-2 flex flex-col gap-2 text-sm">
@@ -116,6 +117,7 @@ export default function AdminDetail() {
         </ol>
       </div>
       <PhotoModal src={viewer?.src} title={viewer?.title} onClose={() => setViewer(null)} />
+      <Link to="/admin/reports" className="admin-action self-start">목록으로 돌아가기</Link>
     </section>
   )
 }

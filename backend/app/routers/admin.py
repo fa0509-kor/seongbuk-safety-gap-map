@@ -19,13 +19,13 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 @router.get("/reports", response_model=list[AdminReportOut])
 def list_reports(source: str | None = None, status: str | None = None, category: str | None = None,
-                 include_demo: bool = True, sort: str = "priority", season: str | None = None, db: Session = Depends(get_db)):
+                 include_demo: bool = True, sort: str = "priority", season: str | None = None, search: str = "", db: Session = Depends(get_db)):
     """관리자 목록. 필터: source(resident/gap/cctv), status, category, season(해빙기/우기/동절기).
     sort: priority(기본, 점수 높은 순 → 같으면 최신) / new / old. 오탐은 점수 0이라 뒤로 감."""
-    return _filtered(db, source, status, category, include_demo, sort, season)
+    return _filtered(db, source, status, category, include_demo, sort, season, search)
 
 
-def _filtered(db: Session, source, status, category, include_demo, sort, season=None) -> list[dict]:
+def _filtered(db: Session, source, status, category, include_demo, sort, season=None, search="") -> list[dict]:
     q = select(Report).options(selectinload(Report.history), selectinload(Report.photo), selectinload(Report.photos),
                                selectinload(Report.feedback), selectinload(Report.recurrence_link), selectinload(Report.client))
     if source:
@@ -40,6 +40,11 @@ def _filtered(db: Session, source, status, category, include_demo, sort, season=
     rows = [serialize.report(r, admin=True) for r in db.scalars(q)]
     if season:
         rows = [x for x in rows if x["season"] == season]
+    term = search.strip().casefold().removeprefix("#")
+    if term:
+        rows = [x for x in rows if any(term in str(value or "").casefold() for value in (
+            x["id"], x.get("gap_rule"), (x.get("ai") or {}).get("category"), x.get("address"),
+        ))]
     if sort == "priority":
         rows.sort(key=lambda x: x["priority"]["total"], reverse=True)
     return rows
@@ -47,9 +52,9 @@ def _filtered(db: Session, source, status, category, include_demo, sort, season=
 
 @router.get("/ledger.xlsx")
 def ledger_xlsx(source: str | None = None, status: str | None = None, category: str | None = None,
-                include_demo: bool = False, sort: str = "priority", season: str | None = None, db: Session = Depends(get_db)):
+                include_demo: bool = False, sort: str = "priority", season: str | None = None, search: str = "", db: Session = Depends(get_db)):
     """점검 대장 엑셀. 목록과 같은 필터를 쓴다. 체험용(is_demo) 제보는 기본으로 뺀다. 사진·개인 정보는 넣지 않는다."""
-    rows = ledger.rows_from(_filtered(db, source, status, category, include_demo, sort, season))
+    rows = ledger.rows_from(_filtered(db, source, status, category, include_demo, sort, season, search))
     stamp = datetime.now(KST).strftime("%Y%m%d")
     return Response(ledger.to_xlsx(rows), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     headers={"Content-Disposition": f"attachment; filename=ledger_{stamp}.xlsx; filename*=UTF-8''%EC%A0%90%EA%B2%80%EB%8C%80%EC%9E%A5_{stamp}.xlsx"})

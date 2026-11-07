@@ -30,24 +30,27 @@ export default function AdminReport() {
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <section className="flex flex-col gap-4 bg-white p-6 print:p-0">
-      <div className="flex flex-wrap items-end gap-2 print:hidden">
+    <section className="admin-page">
+      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <div className="admin-page-heading"><h1>보고서</h1><p>기간별 접수와 조치 현황을 확인하고, 안전 점검 보고서를 출력하세요.</p></div>
+        <button type="button" disabled={!rep} onClick={() => window.print()} className="admin-action">↓ 인쇄 · PDF 저장</button>
+      </div>
+      <div className="admin-panel flex flex-wrap items-end gap-2 print:hidden">
         <label className="text-sm">시작 <input type="date" value={start} onChange={(e) => setStart(e.target.value)} className="rounded border p-1" /></label>
         <label className="text-sm">끝 <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className="rounded border p-1" /></label>
-        <button type="button" onClick={load} className="rounded border px-3 py-1 text-sm">만들기</button>
-        <button type="button" onClick={() => window.print()} className="ml-auto rounded bg-brand px-3 py-1 text-sm text-white">인쇄 · PDF 저장</button>
+        <button type="button" onClick={load} className="admin-action">보고서 만들기</button>
       </div>
       {error && <p className="text-sm text-danger">{error}</p>}
       {rep && (
         <>
-          <header className="border-b pb-2">
+          <header className="admin-panel">
             <h1 className="text-2xl font-bold">성북구 안전 점검 확인서</h1>
             <p className="text-sm text-gray-600">기간 보고 · {rep.period.start} ~ {rep.period.end} · 작성 {rep.generated_at.replace('T', ' ').slice(0, 16)}</p>
           </header>
-          <div className="flex flex-col gap-1">
+          <div className="admin-panel flex flex-col gap-1">
             {rep.summary_lines.map((line) => <p key={line}>{line}</p>)}
           </div>
-          <div className="report-tables grid grid-cols-3 gap-6">
+          <div className="admin-panel report-tables grid grid-cols-3 gap-6">
             <Table title="출처별 접수" data={rep.counts.by_source} />
             <Table title="AI 판별 유형" data={rep.counts.by_category} />
             <Table title="시설 종류 (주민 선택)" data={rep.counts.by_facility} />

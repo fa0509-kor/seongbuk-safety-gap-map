@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../../lib/api.js'
 import { resizeImage } from '../../lib/image.js'
@@ -12,11 +12,25 @@ const CATEGORIES = ['', '콘크리트 균열', '박리', '백태/누수', '철�
 export default function AdminList() {
   const [params, setParams] = useSearchParams()
   const [rows, setRows] = useState([])
+  const [search, setSearch] = useState(params.get('search') ?? '')
+  const [page, setPage] = useState(0)
+  const dialog = useRef(null)
+  const pageSize = 8
+  const lastPage = Math.max(0, Math.ceil(rows.length / pageSize) - 1)
+  const currentPage = Math.min(page, lastPage)
   const [msg, setMsg] = useState('')
   const filters = Object.fromEntries([...params].filter(([, v]) => v))
 
+  const exportCount = rows.filter((r) => !r.is_demo).length
   const load = () => api.adminReports(filters).then(setRows).catch((e) => setMsg(e.message))
-  useEffect(() => { load() }, [params]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    let active = true
+    setPage(0)
+    setSearch(params.get('search') ?? '')
+    api.adminReports(filters).then((data) => { if (active) setRows(data) })
+      .catch((e) => { if (active) setMsg(e.message) })
+    return () => { active = false }
+  }, [params]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (k, v) => { const p = new URLSearchParams(params); v ? p.set(k, v) : p.delete(k); setParams(p) }
 
@@ -42,15 +56,11 @@ export default function AdminList() {
     return r.status === 'done' ? 'bg-teal-100 text-teal-800' : r.status === 'received' ? 'bg-gray-200 text-ink' : 'bg-amber-100 text-amber-800'
   }
   return (
-    <section className="flex flex-col gap-4">
+    <section className="admin-page">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[22px] font-bold">점검 대상 목록</h1>
+        <div className="admin-page-heading"><h1>점검 대상 목록</h1><p>접수된 안전 점검 대상을 검색하고, 담당 부서와 처리 상태를 관리하세요.</p></div>
         <div className="flex flex-wrap items-center gap-2">
-        <a href={api.ledgerUrl(filters)} download
-          className="flex min-h-11 items-center gap-2 rounded-[10px] border border-line bg-white px-4 text-sm font-semibold text-ink">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M4 20h16" /></svg>
-          점검 대장 엑셀
-        </a>
+        <Link to="/admin/map" className="admin-secondary">점검 지도</Link>
         <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16" /></svg>
           CCTV 프레임 업로드
@@ -58,15 +68,25 @@ export default function AdminList() {
         </label>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <form className="admin-panel flex flex-wrap items-center gap-2" onSubmit={(e) => { e.preventDefault(); set('search', search.trim()) }}>
+        <input type="search" aria-label="점검 대상 검색" placeholder="번호 또는 점검 내용 검색" value={search} onChange={(e) => setSearch(e.target.value)} />
+
         {select('source', SOURCES)}
         {select('status', STATUSES)}
         {select('category', Object.fromEntries(CATEGORIES.map((c) => [c, c || '전체 유형'])))}
         {select('season', SEASONS)}
-        {select('sort', { priority: '우선순위순', new: '최신순', old: '오래된순' })}
-      </div>
+        <button type="button" className="admin-secondary" onClick={() => { setSearch(''); setParams({}) }}>초기화</button>
+        <button type="submit" className="admin-action">검색</button>
+      </form>
       {msg && <p className="text-sm text-sub">{msg}</p>}
       <div className="overflow-x-auto rounded-xl border border-line bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-2 p-4">
+          <h2 className="font-bold">전체 대상 {rows.length}건</h2>
+          <div className="flex flex-wrap gap-2">
+            {select('sort', { priority: '우선순위순', new: '최신순', old: '오래된순' })}
+            <button type="button" className="admin-secondary" onClick={() => dialog.current.showModal()}>↓ 엑셀 내려받기</button>
+          </div>
+        </div>
         <table className="admin-list-table w-full text-sm">
           <thead>
             <tr className="border-b border-line text-left text-[13px] font-medium text-sub">
@@ -74,7 +94,7 @@ export default function AdminList() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {rows.slice(currentPage * pageSize, (currentPage + 1) * pageSize).map((r) => (
               <tr key={r.id} className="border-b border-gray-100 last:border-0 hover:bg-blue-50/50">
                 <td data-label="우선순위" className="whitespace-nowrap px-3.5 py-3.5 font-bold">{r.priority.total}</td>
                 <td data-label="번호" className="whitespace-nowrap px-3.5"><Link to={`/admin/reports/${r.id}`} className="font-semibold text-brand">#{r.id}</Link></td>
@@ -104,6 +124,23 @@ export default function AdminList() {
           </tbody>
         </table>
       </div>
+      {lastPage > 0 && <nav aria-label="점검 목록 페이지" className="flex items-center justify-center gap-3 text-sm">
+        <button className="admin-secondary" type="button" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>이전</button>
+        <span>{currentPage + 1} / {lastPage + 1}</span>
+        <button className="admin-secondary" type="button" disabled={currentPage === lastPage} onClick={() => setPage(currentPage + 1)}>다음</button>
+      </nav>}
+      <dialog ref={dialog} aria-labelledby="ledger-title" className="admin-dialog">
+        <h2 id="ledger-title" className="text-xl font-bold">점검 대상 엑셀 내려받기</h2>
+        <p className="mt-2 text-sm text-sub">현재 검색과 필터에 맞는 점검 대상을 업무용 시트로 저장합니다.</p>
+        <div className="my-5 grid gap-2 rounded-xl bg-page p-4 text-sm">
+          <strong>내려받을 대상 {exportCount}건</strong>
+          <p>Excel 통합 문서 (.xlsx) · 체험용 제보 제외</p>
+        </div>
+        <div className="grid grid-cols-[1fr_2fr] gap-2">
+          <button type="button" className="admin-secondary" onClick={() => dialog.current.close()}>취소</button>
+          <a className="admin-action" href={api.ledgerUrl({ ...filters, include_demo: false })} download onClick={() => dialog.current.close()}>엑셀 내려받기 · {exportCount}건</a>
+        </div>
+      </dialog>
       {!rows.length && <p className="text-sub">항목 없음</p>}
       <p className="text-[13px] text-sub">공백 탐지 항목은 AI가 아니라 규칙으로 찾은 것입니다. 신뢰도 대신 "규칙"으로 표시합니다.</p>
       <p className="text-[13px] text-sub">교차확인은 '나도 봤어요'가 3명 이상일 때 표시합니다. 로그인이 없어 브라우저 기준이라, 같은 사람이 여러 브라우저로 누르면 늘 수 있습니다. 엑셀은 위 필터를 그대로 반영하고 체험용 제보는 뺍니다.</p>

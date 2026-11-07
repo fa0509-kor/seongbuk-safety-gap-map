@@ -7,6 +7,7 @@ import MapPage from './pages/MapPage.jsx'
 import MyReports from './pages/MyReports.jsx'
 import AdminLayout from './pages/admin/AdminLayout.jsx'
 import AdminDashboard from './pages/admin/AdminDashboard.jsx'
+import AdminMap from './pages/admin/AdminMap.jsx'
 import AdminList from './pages/admin/AdminList.jsx'
 import AdminDetail from './pages/admin/AdminDetail.jsx'
 import AdminIntegrated from './pages/admin/AdminIntegrated.jsx'
@@ -42,6 +43,7 @@ export default function App() {
       <Route path="admin" element={<AdminLayout />}>
         <Route index element={<AdminDashboard />} />           {/* 관리자 1 대시보드 */}
         <Route path="reports" element={<AdminList />} />       {/* 관리자 2 목록 */}
+        <Route path="map" element={<AdminMap />} />
         <Route path="reports/:id" element={<AdminDetail />} /> {/* 관리자 3 상세 */}
         <Route path="integrated" element={<AdminIntegrated />} /> {/* 통합 점검 후보 (공백 아님) */}
         <Route path="report" element={<AdminReport />} />       {/* 기간별 보고서 */}
