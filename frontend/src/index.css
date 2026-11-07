@@ -337,7 +337,7 @@ button:not(:disabled),select{
   .integrated-side{
     height:auto;
   }
-  .integrated-side>[aria-label="통합 점검 후보 지도"]{
+  .integrated-side>.integrated-map{
     flex:none;
     height:300px;
   }

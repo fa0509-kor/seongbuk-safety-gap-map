@@ -3,10 +3,12 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { api } from '../../lib/api.js'
 import { addBaseLayer } from '../../lib/map.js'
+import { addCluster, groupPoints, MAX_CLUSTER_ZOOM } from '../../lib/cluster.js'
 
 // 통합 점검 후보: 같은 주소에 서로 다른 안전시설이 2종 이상 있는 곳.
 // '공백'이 아니라 여러 부서(소방·보건·복지·교통)가 따로 점검하는 곳을 묶어 점검할 후보 (docs/decisions.md 10/19)
 const KINDS = ['소방용수', 'AED', '무더위쉼터', '어린이보호구역']
+const toLatLng = (f) => [f.geometry.coordinates[1], f.geometry.coordinates[0]]
 
 export default function AdminIntegrated() {
   const el = useRef(null)
@@ -20,11 +22,13 @@ export default function AdminIntegrated() {
   const [selected, setSelected] = useState(null)
   const [need, setNeed] = useState(2)
   const [kind, setKind] = useState('')
+  const [zoom, setZoom] = useState(13) // 확대·축소할 때마다 묶음을 다시 계산
 
   useEffect(() => {
     map.current = L.map(el.current, { zoomSnap: 0.25 }).setView([37.5894, 127.0167], 13) // 0.25 단위로 확대해 후보가 지도에 꽉 차게
     addBaseLayer(map.current)
     layer.current = L.layerGroup().addTo(map.current)
+    map.current.on('zoomend', () => setZoom(map.current.getZoom()))
     api.adminIntegrated().then((g) => setRows(g.features)).catch(() => {})
     // 글꼴·이미지가 늦게 불러와지거나 창 크기가 바뀌면 지도 칸 크기가 달라진다.
     // 그때마다 크기를 다시 재고, 후보를 고르기 전이면 전체 후보에 다시 맞춘다
@@ -56,11 +60,13 @@ export default function AdminIntegrated() {
   useEffect(() => {
     layer.current.clearLayers()
     const pts = []
-    shown.forEach((f) => {
-      const [lon, lat] = f.geometry.coordinates
+    shown.forEach((f) => pts.push(toLatLng(f)))
+    // 멀리서 보면 가까운 후보를 숫자 원으로 묶고, 확대하면 낱개 점 (주민 지도와 같은 방식)
+    groupPoints(shown, map.current, map.current.getZoom(), toLatLng).forEach((items) => {
+      if (items.length > 1) { addCluster(L, layer.current, map.current, items.map(toLatLng), () => setSelected(null)); return }
+      const f = items[0]
       const n = f.properties.kinds.length
-      pts.push([lat, lon])
-      L.circleMarker([lat, lon], { radius: 2 + n * 1.5, color: '#001A47', fillOpacity: 0.6, weight: 1 })
+      L.circleMarker(toLatLng(f), { radius: 4 + n * 2, color: '#001A47', fillOpacity: 0.7, weight: 2 })
         .on('click', () => setSelected(f)).addTo(layer.current)
     })
     // 필터가 바뀌면 보이는 후보가 모두 지도 안에 들어오게 범위를 맞춘다
@@ -72,7 +78,7 @@ export default function AdminIntegrated() {
       map.current.invalidateSize()
       map.current.fitBounds(pts, { padding: [16, 16], maxZoom: 16 })
     }
-  }, [shown]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [shown, zoom]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <section className="admin-page">
@@ -111,7 +117,12 @@ export default function AdminIntegrated() {
             <ul className="flex flex-wrap gap-1.5 text-xs">{selected.properties.kinds.map((k) => <li key={k} className="rounded bg-page px-2 py-1">{k}</li>)}</ul>
             <p className="text-xs text-sub">모두 현장 확인 필요</p>
           </div> : <p className="text-sm text-sub">목록이나 지도에서 주소를 선택하세요.</p>}
-          <div ref={el} className="min-h-[220px] flex-1 overflow-hidden rounded-lg" aria-label="통합 점검 후보 지도" />
+          <div className="integrated-map relative min-h-[220px] flex-1">
+            <div ref={el} className="absolute inset-0 overflow-hidden rounded-lg" aria-label="통합 점검 후보 지도" />
+            <span className="resident-chip pointer-events-none absolute left-14 top-3 z-[500] bg-white text-xs">
+              {zoom < MAX_CLUSTER_ZOOM ? '축소 · 후보 묶음' : '확대 · 개별 위치'}
+            </span>
+          </div>
         </div>
       </div>
     </section>

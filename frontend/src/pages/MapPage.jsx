@@ -6,6 +6,7 @@ import { api } from '../lib/api.js'
 import { addBaseLayer } from '../lib/map.js'
 import PhotoViewer from '../components/PhotoViewer.jsx'
 import { myReports } from '../lib/myReports.js'
+import { groupPoints, MAX_CLUSTER_ZOOM } from '../lib/cluster.js'
 
 // 주민 3 지도. 필터: 전체 / 주민 제보 / 조치 완료. 소방용수 '점검 필요' 점은 주민이 신경 쓰는 정보가 아니라(멘토 지적) 이 화면에서 뺐고 관리자 목록에만 남김 (docs/decisions.md). 하단 시트에 선택 항목 요약.
 // 배경 타일 설정은 lib/map.js (OSM 표준 타일, 출처 표기 필수)
@@ -13,51 +14,8 @@ const CENTER = [37.5894, 127.0167]
 const COLORS = { received: '#001a47', review: '#a7430d', action: '#a7430d', done: '#166548' }
 const FILTERS = [['all', '전체'], ['resident', '주민 제보'], ['done', '조치 완료']]
 const LEGEND = [['received', '접수'], ['review', '검토·조치 중'], ['done', '조치 완료']]
-// 멀리서 보면 가까운 제보를 숫자 원으로 묶고, 확대하면 낱개로 풀린다 (부동산 앱 지도처럼). 의존 라이브러리 없이 화면 격자로 묶는다.
-const CLUSTER_PX = 44      // 화면에서 이 거리(픽셀) 안에 있는 점끼리 한 묶음 (거리 기준이라 격자 경계에 걸려 갈라지지 않음)
-const MAX_CLUSTER_ZOOM = 17 // 이 줌 이상에서는 묶지 않고 낱개로 보여 줌
-
-function groupPoints(points, map, zoom) {
-  if (zoom >= MAX_CLUSTER_ZOOM) return points.map((f) => [f])
-  // 1) 위치 순으로 훑으며 가장 가까운 묶음(중심 기준)에 넣거나 새 묶음을 만든다. 순서를 고정해 같은 줌에서 늘 같은 결과가 나오게 함
-  const sorted = [...points].sort((a, b) => a.geometry.coordinates[0] - b.geometry.coordinates[0] || a.geometry.coordinates[1] - b.geometry.coordinates[1])
-  const groups = []
-  sorted.forEach((f) => {
-    const [lon, lat] = f.geometry.coordinates
-    const pt = map.project([lat, lon], zoom)
-    let best = null
-    let bd = CLUSTER_PX
-    groups.forEach((g) => {
-      const d = Math.hypot(g.x - pt.x, g.y - pt.y)
-      if (d < bd) { bd = d; best = g }
-    })
-    if (best) {
-      best.items.push(f)
-      best.x += (pt.x - best.x) / best.items.length
-      best.y += (pt.y - best.y) / best.items.length
-    } else groups.push({ x: pt.x, y: pt.y, items: [f] })
-  })
-  // 2) 중심끼리 아직 가까운 묶음은 하나로 합친다 (더 합칠 게 없을 때까지)
-  let merged = true
-  while (merged) {
-    merged = false
-    for (let i = 0; i < groups.length && !merged; i += 1) {
-      for (let j = i + 1; j < groups.length; j += 1) {
-        if (Math.hypot(groups[i].x - groups[j].x, groups[i].y - groups[j].y) < CLUSTER_PX) {
-          const [a, b] = [groups[i], groups[j]]
-          const n = a.items.length + b.items.length
-          a.x = (a.x * a.items.length + b.x * b.items.length) / n
-          a.y = (a.y * a.items.length + b.y * b.items.length) / n
-          a.items.push(...b.items)
-          groups.splice(j, 1)
-          merged = true
-          break
-        }
-      }
-    }
-  }
-  return groups.map((g) => g.items)
-}
+// 멀리서 보면 가까운 제보를 숫자 원으로 묶고, 확대하면 낱개로 풀린다 (lib/cluster.js)
+const toLatLng = (f) => [f.geometry.coordinates[1], f.geometry.coordinates[0]]
 
 export default function MapPage() {
   const el = useRef(null)
@@ -116,7 +74,7 @@ export default function MapPage() {
 
   useEffect(() => {
     layer.current.clearLayers()
-    groupPoints(shown, map.current, view.zoom).forEach((items) => {
+    groupPoints(shown, map.current, view.zoom, toLatLng).forEach((items) => {
       if (items.length === 1) {
         const f = items[0]
         const [lon, lat] = f.geometry.coordinates
