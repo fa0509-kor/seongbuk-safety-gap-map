@@ -138,3 +138,27 @@ def test_vision_parse_tolerates_extra_text():
     assert parse_result(body + "\n참고: {추가 설명}")["category"] == "박리"  # 뒤에 중괄호 문장이 붙어도
     with pytest.raises(_json.JSONDecodeError):
         parse_result(body[:-30])  # 잘린 응답은 실패 → classify가 mock으로 대체
+
+
+def test_같은_사진은_AI_결과를_다시_부르지_않는다(monkeypatch):
+    """실제 AI 결과만 기억한다. mock 결과는 기억하지 않는다."""
+    from app import vision
+    vision._cache.clear()
+    calls = []
+
+    def fake(jpeg):
+        calls.append(1)
+        return {"category": "콘크리트 균열", "confidence": 90, "mock": False}, "anthropic"
+
+    monkeypatch.setattr(vision, "classify", fake)
+    a = vision.classify_cached(b"same-bytes")
+    b = vision.classify_cached(b"same-bytes")
+    c = vision.classify_cached(b"other-bytes")
+    assert len(calls) == 2 and a == b and c[0]["category"] == "콘크리트 균열"
+    b[0]["category"] = "바뀜"  # 돌려받은 값을 고쳐도 기억된 값은 그대로
+    assert vision.classify_cached(b"same-bytes")[0]["category"] == "콘크리트 균열"
+
+    vision._cache.clear()
+    monkeypatch.setattr(vision, "classify", lambda j: ({"category": "기타", "mock": True}, "mock"))
+    vision.classify_cached(b"x"); vision.classify_cached(b"x")
+    assert len(vision._cache) == 0

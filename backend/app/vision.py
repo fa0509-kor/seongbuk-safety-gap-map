@@ -111,3 +111,32 @@ def classify(jpeg: bytes) -> tuple[dict, str]:
     result["mock"] = provider == "mock"
     result["prompt_version"] = PROMPT_VERSION
     return result, provider
+
+
+# ---- 같은 사진은 AI를 다시 부르지 않는다 -------------------------------------------------
+# 체험용 사진처럼 같은 파일이 반복해서 올라오면 매번 몇 초씩 기다릴 필요가 없다. 서버 프로세스 안에서만 기억하고(재시작하면 비워짐),
+# 실제 AI 결과만 저장한다(mock·실패로 대체된 결과는 저장하지 않는다). 공급자와 프롬프트 버전이 바뀌면 키가 달라져 새로 판별한다.
+import hashlib
+import threading
+from collections import OrderedDict
+from copy import deepcopy
+
+_CACHE_MAX = 256
+_cache: OrderedDict = OrderedDict()
+_cache_lock = threading.Lock()
+
+
+def classify_cached(jpeg: bytes) -> tuple[dict, str]:
+    key = (config.vision_provider(), PROMPT_VERSION, hashlib.sha256(jpeg).hexdigest())
+    with _cache_lock:
+        hit = _cache.get(key)
+        if hit is not None:
+            _cache.move_to_end(key)
+            return deepcopy(hit)
+    result, provider = classify(jpeg)
+    if not result.get("mock") and not result.get("error"):
+        with _cache_lock:
+            _cache[key] = deepcopy((result, provider))
+            while len(_cache) > _CACHE_MAX:
+                _cache.popitem(last=False)
+    return result, provider
