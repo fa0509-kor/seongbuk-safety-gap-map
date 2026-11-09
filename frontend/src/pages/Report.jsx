@@ -1,5 +1,5 @@
 import ResidentHeader from '../components/ResidentHeader.jsx'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { toPolite } from '../lib/politeKo.js'
 import { plainCategory, plainText } from '../lib/labels.js'
@@ -48,6 +48,7 @@ export default function Report() {
   const [lastFiles, setLastFiles] = useState(null)  // '다시 시도'용
   const [uploading, setUploading] = useState(false)
   const [busy, setBusy] = useState(false)           // 제보 보내는 중
+  const sending = useRef(false)                      // 연달아 눌러도 한 번만 보낸다 (busy는 다음 화면 그리기 전에는 아직 false라서 빠르게 두 번 누르면 제보가 두 건 만들어졌다)
   const [error, setError] = useState('')
   const [draftBack, setDraftBack] = useState(false) // 임시저장을 불러온 상태
   const [draftReady, setDraftReady] = useState(false)
@@ -120,6 +121,8 @@ export default function Report() {
   }
 
   async function submit() {
+    if (sending.current) return
+    sending.current = true
     setBusy(true); setError('')
     try {
       const [main, ...rest] = photos
@@ -134,7 +137,7 @@ export default function Report() {
       myReports.add(r.public_id)
       myReports.markSeen() // 방금 보낸 제보는 '새 소식'이 아님 → 빨간 점은 담당자가 처리할 때부터
       navigate('/my')
-    } catch (e) { setError(`제보 실패: ${e.message}`) } finally { setBusy(false) }
+    } catch (e) { sending.current = false; setError(`제보 실패: ${e.message}`) } finally { setBusy(false) } // 성공하면 화면이 넘어갈 때까지 잠가 둔다(바로 풀면 넘어가기 직전에 한 번 더 눌린다)
   }
 
   const locText = {
