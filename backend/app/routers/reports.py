@@ -101,7 +101,7 @@ def _public(r: Report, client_key: str | None = None) -> dict:
     제보 번호는 지도에 공개돼 있어서, 번호만 알아도 사진을 볼 수 있으면 사실상 모든 제보 사진이 공개되기 때문이다.
     조치 완료된 제보는 누구에게나 사진을 보여 준다(지도의 조치 전·후 보기). 식별값이 없던 옛 제보는 본인 확인이 안 되므로 완료 전에는 사진을 숨긴다.
     AI 공개 검수에서 걸린 사진(얼굴·번호판·부적절·점검과 무관)은 본인 브라우저를 빼고 누구에게도 보이지 않는다(완료된 제보도 같다).
-    config.PUBLIC_PHOTOS_AFTER_AI_CHECK를 켜면 담당자가 확인을 시작한(검토 이후) 제보는 완료 전이어도 검수를 통과한(ok=True) 사진을 공개한다. 접수 상태는 공개하지 않는다.
+    config.PUBLIC_PHOTOS_AFTER_AI_CHECK를 켜면 담당자가 확인을 시작한(검토 이후) 제보는 완료 전이어도 사진을 공개한다. 담당자 확인이 공개 승인이고, AI 공개 검수에 걸린(ok=False) 사진만 숨긴다. 접수 상태는 공개하지 않는다.
     설명 글(memo, 사진별 메모)도 사진과 같은 기준이다: 사진이 공개되지 않으면 글도 내보내지 않는다(글에 사진 속 사람·번호판 이야기가 들어갈 수 있어서)."""
     out = serialize.report(r)
     owner = bool(client_key and r.client is not None and r.client.client_key == client_key)
@@ -116,7 +116,7 @@ def _public(r: Report, client_key: str | None = None) -> dict:
 
     def visible(key: str) -> bool:
         ok = mod.get(key)
-        return ok is not False if done else ok is True   # 완료: 걸리지 않으면 공개 / 완료 전: 통과가 확인돼야 공개
+        return ok is not False   # 담당자가 확인한(검토 이후) 제보는 AI 공개 검수가 걸러 낸 사진만 숨긴다. 검수를 못 한 사진(AI 키 없음·호출 실패)은 담당자 확인으로 갈음한다
 
     shown = [(i, k) for i, k in enumerate(keys) if visible(k)]
     photos = [out["photos"][i] for i, _ in shown if i < len(out["photos"])]

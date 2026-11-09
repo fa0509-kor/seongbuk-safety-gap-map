@@ -69,9 +69,10 @@ def vision_provider() -> str:
     return "mock"
 
 
-# 지도에서 조치 완료 전 제보의 사진도 보여 줄지. 켜면 AI 공개 검수를 통과한 사진(얼굴·번호판·부적절·무관 없음)만 누구에게나 보이고,
-# 검수에 걸렸거나 검수를 못 한 사진(AI 키가 없거나 호출 실패)은 공개하지 않는다.
-# 기본은 켜짐(11/9 결정: 공개하되 부적절한 사진이 필터에 걸리면 미공개). 끄려면 PUBLIC_PHOTOS_AFTER_AI_CHECK=0 (조치 완료 건만 공개).
+# 지도에서 조치 완료 전 제보의 사진도 보여 줄지. 켜면 담당자가 확인한(검토 이후) 제보의 사진은 누구에게나 보이고,
+# AI 공개 검수(얼굴·번호판·부적절·무관)에 걸린 사진만 숨긴다. 접수 상태는 사진도 설명도 내보내지 않는다.
+# 담당자 확인이 공개 승인이라 AI 검수를 못 한 사진(AI 키가 없거나 호출 실패)은 담당자 확인으로 갈음한다.
+# 기본은 켜짐(11/9 결정). 끄려면 PUBLIC_PHOTOS_AFTER_AI_CHECK=0 (조치 완료 건만 공개).
 PUBLIC_PHOTOS_AFTER_AI_CHECK = os.getenv("PUBLIC_PHOTOS_AFTER_AI_CHECK", "1").lower() in ("1", "true", "yes")
 
 OPENAI_VISION_MODEL = os.getenv("OPENAI_VISION_MODEL", "gpt-4o-mini")
