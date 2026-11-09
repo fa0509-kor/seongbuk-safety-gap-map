@@ -179,6 +179,9 @@ export default function Home() {
         <span className="mt-2.5 flex items-center justify-between text-sm font-bold">지도에서 다른 제보 보기<img src={residentAsset('home-imgChev.svg')} alt="" /></span>
         <span className="mt-1 block text-xs text-sub">제보 위치와 처리 상황을 지도로 볼 수 있어요.</span>
       </Link>
+      <Link to="/guide" className="flex min-h-[52px] items-center justify-between rounded-[15px] border border-line bg-white px-4 text-sm font-bold">
+        서비스 안내 · 포인트와 봉사시간<img src={residentAsset('home-imgChev.svg')} alt="" />
+      </Link>
     </section>
   )
 }

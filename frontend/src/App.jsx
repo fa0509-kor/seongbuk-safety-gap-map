@@ -5,6 +5,7 @@ import Home from './pages/Home.jsx'
 import Report from './pages/Report.jsx'
 import MapPage from './pages/MapPage.jsx'
 import MyReports from './pages/MyReports.jsx'
+import Guide from './pages/Guide.jsx'
 import AdminLayout from './pages/admin/AdminLayout.jsx'
 import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 import AdminMap from './pages/admin/AdminMap.jsx'
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="report" element={<ReportRoute />} />  {/* 주민 2 제보 */}
         <Route path="map" element={<MapPage />} />    {/* 주민 3 지도 */}
         <Route path="my" element={<MyReports />} />   {/* 주민 4 내 제보 */}
+        <Route path="guide" element={<Guide />} />    {/* 서비스 안내·포인트(준비 중) */}
       </Route>
       <Route path="admin" element={<AdminLayout />}>
         <Route index element={<AdminDashboard />} />           {/* 관리자 1 대시보드 */}
