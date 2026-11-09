@@ -35,7 +35,10 @@ export default function MapPage() {
   const [view, setView] = useState({ zoom: 14, bounds: null }) // 확대·이동할 때마다 갱신 → 묶음과 '이 지역 N건'을 다시 계산
 
   // 나도 봤어요(+1): 같은 곳 확인 인원 → 우선순위 점수에 반영. 브라우저당 한 번
+  const confirming = useRef(new Set()) // 같은 제보를 연달아 눌러도 한 번만 보낸다 (서버는 누를 때마다 +1)
   async function confirmSeen(publicId) {
+    if (confirming.current.has(publicId) || myReports.confirmed(publicId)) return
+    confirming.current.add(publicId)
     try {
       const r = await api.confirm(publicId)
       myReports.markConfirmed(publicId)
@@ -43,7 +46,7 @@ export default function MapPage() {
         ? { ...f, properties: { ...f.properties, confirm_count: r.confirm_count, cross_checked: r.cross_checked } } : f)))
       setSelected((f) => f?.properties.public_id === publicId ? { ...f, properties: { ...f.properties, confirm_count: r.confirm_count, cross_checked: r.cross_checked } } : f)
       setConfirmMsg('확인 고마워요. 담당자 화면의 우선순위에 반영됩니다.')
-    } catch (e) { setConfirmMsg(`실패: ${e.message}`) }
+    } catch (e) { confirming.current.delete(publicId); setConfirmMsg(`실패: ${e.message}`) }
   }
 
   useEffect(() => {
