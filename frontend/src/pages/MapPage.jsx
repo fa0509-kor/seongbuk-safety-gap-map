@@ -3,18 +3,21 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { api } from '../lib/api.js'
-import { plainCategory } from '../lib/labels.js'
+import { plainCategory, PLAIN_CATEGORIES } from '../lib/labels.js'
 import { addBaseLayer } from '../lib/map.js'
 import PhotoViewer from '../components/PhotoViewer.jsx'
 import { myReports } from '../lib/myReports.js'
 import { groupPoints, MAX_CLUSTER_ZOOM } from '../lib/cluster.js'
 
-// 주민 3 지도. 필터: 전체 / 주민 제보 / 조치 완료. 소방용수 '점검 필요' 점은 주민이 신경 쓰는 정보가 아니라(멘토 지적) 이 화면에서 뺐고 관리자 목록에만 남김 (docs/decisions.md). 하단 시트에 선택 항목 요약.
+// 주민 3 지도. 필터: 상태(전체·접수·검토 조치 중·조치 완료·재확인 필요)와 유형을 눌러서 고른다. 검색창은 없앴다(멘토·팀장 11/9). 소방용수 '점검 필요' 점은 주민이 신경 쓰는 정보가 아니라(멘토 지적) 이 화면에서 뺐고 관리자 목록에만 남김 (docs/decisions.md). 하단 시트에 선택 항목 요약.
 // 배경 타일 설정은 lib/map.js (OSM 표준 타일, 출처 표기 필수)
 const CENTER = [37.5894, 127.0167]
 const COLORS = { received: '#001a47', review: '#a7430d', action: '#a7430d', done: '#bfd300' }
-const FILTERS = [['all', '전체'], ['resident', '주민 제보'], ['done', '조치 완료']]
-const LEGEND = [['received', '접수'], ['review', '검토·조치 중'], ['done', '조치 완료']]
+// 상태 필터 겸 범례: 점 색은 지도 핀 색과 같다
+const STATUS_FILTERS = [['all', '전체', null], ['received', '접수', COLORS.received], ['mid', '검토·조치 중', COLORS.review], ['done', '조치 완료', COLORS.done], ['recheck', '조치 후 재확인 필요', '#dc2626']]
+const statusMatch = (p, key) => (key === 'all' ? true : key === 'recheck' ? !!p.recheck : key === 'done' ? p.status === 'done'
+  : key === 'mid' ? p.status === 'review' || p.status === 'action' : p.status === 'received')
+const catName = (p) => plainCategory(p.category) ?? '기타'
 // 멀리서 보면 가까운 제보를 숫자 원으로 묶고, 확대하면 낱개로 풀린다 (lib/cluster.js)
 const toLatLng = (f) => [f.geometry.coordinates[1], f.geometry.coordinates[0]]
 
@@ -24,7 +27,7 @@ export default function MapPage() {
   const layer = useRef(null)
   const [reports, setReports] = useState([])
   const [filter, setFilter] = useState('all')
-  const [query, setQuery] = useState('')
+  const [cat, setCat] = useState('all') // 유형 필터
   const [selected, setSelected] = useState(null)
   const [confirmMsg, setConfirmMsg] = useState('')
   const [shots, setShots] = useState({ before: null, after: null }) // 선택한 제보의 조치 전·후 사진 (눌렀을 때 불러옴)
@@ -64,14 +67,12 @@ export default function MapPage() {
   }, [])
 
   const shown = useMemo(() => {
-    const repPts = reports.map((f) => ({ ...f, _color: COLORS[f.properties.status] ?? COLORS.received }))
-    const term = query.trim().toLowerCase()
-    return repPts.filter(({ properties: p }) => {
-      if (filter === 'done' && p.status !== 'done') return false
-      if (filter === 'resident' && p.status === 'done') return false
-      return !term || [p.category, plainCategory(p.category), p.facility_label, p.address].some((value) => value?.toLowerCase().includes(term))
-    })
-  }, [reports, filter, query])
+    return reports.map((f) => ({ ...f, _color: COLORS[f.properties.status] ?? COLORS.received }))
+      .filter(({ properties: p }) => (cat === 'all' || catName(p) === cat) && statusMatch(p, filter))
+  }, [reports, filter, cat])
+  // 상태 칩에 붙일 건수: 지금 고른 유형 안에서 센다
+  const statusCount = useMemo(() => Object.fromEntries(STATUS_FILTERS.map(([k]) => [k, reports
+    .filter(({ properties: p }) => (cat === 'all' || catName(p) === cat) && statusMatch(p, k)).length])), [reports, cat])
 
   useEffect(() => {
     layer.current.clearLayers()
@@ -126,20 +127,25 @@ export default function MapPage() {
   return (
     <section className="resident-screen">
       <ResidentHeader caption="성북구 주민 제보" title="동네 지도" />
-      <input type="search" aria-label="제보 검색" placeholder="제보 유형 · 시설 검색" value={query}
-        onChange={(e) => { setQuery(e.target.value); setSelected(null) }}
-        className="rounded-xl border border-[#ebefcb] bg-white p-2.5 text-sm" />
-      <div className="flex flex-wrap gap-1.5">
-        {FILTERS.map(([k, label]) => (
-          <button key={k} type="button" aria-pressed={filter === k} onClick={() => { setFilter(k); setSelected(null) }}
-            className={`resident-chip ${filter === k ? 'bg-ink text-white' : 'border border-line bg-white text-ink'}`}>{label}</button>
-        ))}
+      <p className="text-sm leading-snug text-sub">주민이 알린 위험이 지도에 표시돼요. 핀을 누르면 처리 상황을 볼 수 있어요.</p>
+      <div className="grid gap-2">
+        <div role="group" aria-label="처리 상태" className="-mx-6 flex gap-2 overflow-x-auto px-6 pb-0.5 [scrollbar-width:none]">
+          {STATUS_FILTERS.map(([k, label, color]) => (
+            <button key={k} type="button" aria-pressed={filter === k} onClick={() => { setFilter(k); setSelected(null) }}
+              className={`flex min-h-[44px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-[13px] font-bold ${filter === k ? 'bg-ink text-white' : 'border border-line bg-white text-ink'}`}>
+              {color && <span className="size-2.5 rounded-full border border-white" style={{ background: color }} />}{label} {statusCount[k]}
+            </button>
+          ))}
+        </div>
+        <div role="group" aria-label="위험 유형" className="-mx-6 flex gap-2 overflow-x-auto px-6 pb-0.5 [scrollbar-width:none]">
+          {[['all', '모든 유형'], ...PLAIN_CATEGORIES.map((c) => [c, c])].map(([k, label]) => (
+            <button key={k} type="button" aria-pressed={cat === k} onClick={() => { setCat(k); setSelected(null) }}
+              className={`min-h-[44px] shrink-0 whitespace-nowrap rounded-full px-3.5 text-[13px] font-bold ${cat === k ? 'bg-brand text-white' : 'border border-line bg-[#ebefcb] text-ink'}`}>{label}</button>
+          ))}
+        </div>
       </div>
-      <div className="flex flex-wrap justify-between gap-2 rounded-xl border border-line bg-white px-3 py-2 text-[11px] font-bold">
-        {LEGEND.map(([k, label]) => (
-          <div key={k} className="flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ background: COLORS[k] }} />{label}</div>
-        ))}
-        <div className="flex items-center gap-1"><span className="h-2 w-2 rounded-full border-2 border-red-600" style={{ background: COLORS.done }} />조치 후 재확인 필요</div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-line bg-white px-3 py-2 text-[11px] font-bold">
+        <div className="flex items-center gap-1"><span className="h-2 w-2 rounded-full border-2 border-red-600" style={{ background: COLORS.done }} />빨간 테두리 = 조치 후 재확인 필요</div>
         <div className="flex items-center gap-1"><span className="h-2 w-3 border border-red-600 bg-red-300" />어린이보호구역</div>
       </div>
       <div className="relative">
@@ -150,7 +156,7 @@ export default function MapPage() {
       </div>
       {!p && <article className="resident-card">
         <h2 className="text-sm font-bold">이 지역 제보 {inView}건</h2>
-        <p className="mt-1 text-xs text-sub">묶음을 누르거나 지도를 확대하면 개별 제보 위치를 볼 수 있어요.</p>
+        <p className="mt-1 text-xs text-sub">{shown.length === 0 ? '고른 조건에 맞는 제보가 없어요. 다른 상태나 유형을 눌러 보세요.' : '묶음을 누르거나 지도를 확대하면 개별 제보 위치를 볼 수 있어요.'}</p>
       </article>}
       {viewer && <PhotoViewer before={shots.before} after={shots.after} onClose={() => setViewer(false)} />}
       {p && (
