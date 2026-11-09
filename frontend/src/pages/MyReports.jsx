@@ -1,5 +1,6 @@
 import ResidentHeader, { residentAsset } from '../components/ResidentHeader.jsx'
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import BeforeAfter from '../components/BeforeAfter.jsx'
 import ClientIdBox from '../components/ClientIdBox.jsx'
 import PhotoModal from '../components/PhotoModal.jsx'
@@ -21,6 +22,10 @@ export default function MyReports() {
   const [error, setError] = useState('')
   const [voteMsg, setVoteMsg] = useState({})
   const loaded = useRef(false)
+  const [score, setScore] = useState(undefined) // 내 점수·순위 (undefined: 불러오는 중, null: 아직 순위 없음)
+  useEffect(() => {
+    api.ranking(1, myReports.clientKey()).then((r) => setScore(r.me ?? null)).catch(() => setScore(null))
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -83,13 +88,21 @@ export default function MyReports() {
   return (
     <section className="resident-screen">
       <PhotoModal src={viewer?.src} title={viewer?.title} onClose={() => setViewer(null)} />
-      <ResidentHeader caption="접수부터 완료까지" title="내 제보" />
+      <ResidentHeader caption="내 제보와 내 점수" title="마이페이지" />
       <div className="relative min-h-[129px] overflow-hidden rounded-[20px] bg-[#ebefcb] p-4">
         <img src={residentAsset('my-img.png')} alt="" className="absolute right-3 top-2 size-[112px] object-contain" />
         <p className="relative text-[13px] font-semibold text-sub">내가 보낸 제보</p>
         <p className="relative my-2 text-[28px] font-bold">{list.length}건</p>
         <p className="relative max-w-[66%] text-xs text-sub">이 브라우저에서 보낸 제보를 확인해요.</p>
       </div>
+      <Link to="/guide" className="resident-card flex min-h-[64px] items-center justify-between gap-3">
+        <span className="min-w-0">
+          <span className="block text-[13px] font-semibold text-sub">내 점수</span>
+          {score ? <span className="block text-base font-bold">{score.points}점 · {score.rank}위 <span className="text-xs font-normal text-sub">(확인된 제보 {score.count}건)</span></span>
+            : <span className="block text-sm">{score === undefined ? '불러오는 중이에요.' : '담당자가 확인한 제보가 생기면 점수가 쌓여요.'}</span>}
+        </span>
+        <span className="shrink-0 text-xs font-bold underline">서비스 안내 · 포인트와 봉사시간</span>
+      </Link>
       {!list.length && <p className="resident-card text-sm text-sub">아직 이 브라우저에서 보낸 제보가 없어요.</p>}
       {list.map((r) => {
         const ac = r.aftercare ?? { fixed: 0, not_fixed: 0, recurrence: null }
