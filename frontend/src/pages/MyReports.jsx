@@ -7,6 +7,7 @@ import StatusSteps from '../components/StatusSteps.jsx'
 import { api } from '../lib/api.js'
 import { formatTaken } from '../lib/exif.js'
 import { myReports } from '../lib/myReports.js'
+import { plainCategory } from '../lib/labels.js'
 
 // 주민 4 내 제보: 상태 진행, 조치 전·후 비교, 조치 결과 확인(고쳐졌어요/아직 그대로예요), 재발 안내, 처리 이력, 담당 부서 메모.
 // 이 화면을 열면 '확인한 시각'을 저장해 하단바 빨간 점이 꺼진다.
@@ -100,7 +101,7 @@ export default function MyReports() {
             <div className="flex flex-col items-start gap-2">
               <span className={`rounded-full px-2.5 py-0.5 text-[13px] font-semibold ${chip(r.status, r.not_target)}`}>{r.not_target ? '처리 대상 아님' : (r.status_label ?? r.status)}</span>
               <div className="flex flex-col gap-0.5">
-                <span className="text-lg font-bold leading-snug">{r.ai?.category ?? '분류 없음'}{r.facility_label && ` · ${r.facility_label}`}</span>
+                <span className="text-lg font-bold leading-snug">{plainCategory(r.ai?.category) ?? '분류 없음'}{r.facility_label && ` · ${r.facility_label}`}</span>
                 <span className="text-[13px] text-sub">{new Date(r.created_at).toLocaleDateString('ko-KR')} · 접수번호 {r.public_id}</span>
               </div>
             </div>

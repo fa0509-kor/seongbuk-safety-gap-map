@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { api } from '../lib/api.js'
+import { plainCategory } from '../lib/labels.js'
 import { addBaseLayer } from '../lib/map.js'
 import PhotoViewer from '../components/PhotoViewer.jsx'
 import { myReports } from '../lib/myReports.js'
@@ -68,7 +69,7 @@ export default function MapPage() {
     return repPts.filter(({ properties: p }) => {
       if (filter === 'done' && p.status !== 'done') return false
       if (filter === 'resident' && p.status === 'done') return false
-      return !term || [p.category, p.facility_label, p.address].some((value) => value?.toLowerCase().includes(term))
+      return !term || [p.category, plainCategory(p.category), p.facility_label, p.address].some((value) => value?.toLowerCase().includes(term))
     })
   }, [reports, filter, query])
 
@@ -84,7 +85,7 @@ export default function MapPage() {
           className: `resident-map-pin${f.properties.status === 'done' ? ' is-done' : ''}`, iconSize: [32, 32],
           html: `<span style="background:${f._color};border-color:${recheck ? '#dc2626' : '#fff'}"><img src="${residentAsset('home-imgPin.svg')}" alt=""></span>`,
         })
-        L.marker([lat, lon], { icon, alt: f.properties.category ?? '주민 제보' })
+        L.marker([lat, lon], { icon, alt: plainCategory(f.properties.category) ?? '주민 제보' })
           .on('click', () => { setSelected(f); setConfirmMsg('') })
           .addTo(layer.current)
         return
@@ -158,7 +159,7 @@ export default function MapPage() {
           <div className="flex items-start gap-3">
             <div className="flex min-w-0 flex-1 flex-col gap-2.5">
               <div className="text-[13px] text-gray-500">주민 제보 · {p.status_label}{p.facility_label && ` · ${p.facility_label}`}</div>
-              <div className="font-semibold">{p.category ?? '분류 없음'}</div>
+              <div className="font-semibold">{plainCategory(p.category) ?? '분류 없음'}</div>
               <div className="text-[13px] text-gray-500">{new Date(p.created_at).toLocaleString('ko-KR')} · 같은 곳 확인 {p.confirm_count ?? 0}명{p.cross_checked && ' · 교차확인'}</div>
             </div>
             {(shots.before || shots.after) && (

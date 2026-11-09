@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api.js'
 import { myReports } from '../lib/myReports.js'
+import { plainCategory } from '../lib/labels.js'
 
 // 제보 화면: 같은 곳(기본 50m, 폰 위치 정확도가 나쁘면 더 넓게)에 이미 있는 제보를 먼저 보여 준다 (중복 제보 줄이기, 사후 관리).
 //  - 진행 중: '나도 봤어요'로 확인만 남기고, 그 제보를 내 제보에서 따라본다.
@@ -56,7 +57,7 @@ export default function NearbyReports({ pos, category, accuracy }) {
         return (
           <div key={r.public_id} className="flex flex-col gap-2 rounded-lg bg-page px-3 py-2">
             <div className="flex flex-col gap-0.5 text-sm">
-              <span className="font-medium">{r.category ?? '분류 없음'}{r.facility_label && ` · ${r.facility_label}`}</span>
+              <span className="font-medium">{plainCategory(r.category) ?? '분류 없음'}{r.facility_label && ` · ${r.facility_label}`}</span>
               {r.state === 'open' && (
                 <span className="text-[13px] text-sub">{r.status_label} · 접수 후 {daysSince(r.created_at)}일째 · 약 {r.distance_m}m · 확인 {r.confirm_count}명{r.dept && ` · ${r.dept}`}</span>
               )}

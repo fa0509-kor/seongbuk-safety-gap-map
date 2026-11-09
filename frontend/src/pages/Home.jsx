@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import ResidentHeader, { residentAsset } from '../components/ResidentHeader.jsx'
 import BeforeAfter from '../components/BeforeAfter.jsx'
 import { api } from '../lib/api.js'
+import { plainCategory } from '../lib/labels.js'
 
 export default function Home() {
   const [news, setNews] = useState(null)
@@ -41,7 +42,7 @@ export default function Home() {
       <article className="resident-card">
         {news ? <>
           <span className="resident-chip bg-[#e5f4ec] text-[#166548]">조치 완료</span>
-          <h3 className="mt-2 font-bold">{news.category ?? '주민 제보'} 조치 완료</h3>
+          <h3 className="mt-2 font-bold">{plainCategory(news.category) ?? '주민 제보'} 조치 완료</h3>
           <p className="mt-2 text-xs text-sub">주민 제보로 발견한 위험을 정리했어요.</p>
           {photos && <div className="mt-3"><BeforeAfter before={photos.before} after={photos.after} /></div>}
         </> : <p className="text-sm text-sub">{error ? '동네 소식을 불러오지 못했어요.' : '최근 조치 완료 소식이 여기에 표시돼요.'}</p>}

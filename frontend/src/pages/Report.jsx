@@ -2,6 +2,7 @@ import ResidentHeader from '../components/ResidentHeader.jsx'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { toPolite } from '../lib/politeKo.js'
+import { plainCategory, plainText } from '../lib/labels.js'
 import AIResultCard from '../components/AIResultCard.jsx'
 import NearbyReports from '../components/NearbyReports.jsx'
 import PhotoGuide from '../components/PhotoGuide.jsx'
@@ -28,7 +29,7 @@ const EXAMPLES = [
 const MAX_PHOTOS = 4
 const photoSrc = (key) => `/api/photos/${key}` // 서버에 올라간 사진 (로컬은 바로, supabase는 서명 주소로 넘겨 줌)
 const FLAG_LABELS = { person: '사람 얼굴', plate: '차량 번호판', inappropriate: '부적절한 내용', off_topic: '점검과 상관없는 내용' }
-const aiDraft = (ai) => (ai && !ai.mock && ai.category ? `${ai.category} 사진입니다. ${toPolite(ai.reason ?? '')}`.trim().slice(0, 200) : '')
+const aiDraft = (ai) => (ai && !ai.mock && ai.category ? `${plainCategory(ai.category)} 사진입니다. ${plainText(toPolite(ai.reason ?? ''))}`.trim().slice(0, 200) : '')
 
 export default function Report() {
   const [params] = useSearchParams()
@@ -210,7 +211,7 @@ export default function Report() {
             ))}
           </div>
         </fieldset>
-        {photo.ai && <div className="resident-ai"><AIResultCard ai={photo.ai} highlight /></div>}
+        {photo.ai && <div className="resident-ai"><AIResultCard ai={photo.ai} highlight plain /></div>}
         {photo.ai?.moderation?.ok === false && (
           <p role="status" className="rounded-xl bg-amber-50 px-3 py-2.5 text-sm leading-snug">
             이 사진은 지도에 공개되지 않아요. 보이는 내용: {photo.ai.moderation.flags.map((f) => FLAG_LABELS[f] ?? f).join(' · ')}. 제보는 그대로 접수돼요. 가능하면 사람·번호판이 나오지 않게 다시 찍어 주세요.
