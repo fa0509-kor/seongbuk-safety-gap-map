@@ -225,6 +225,21 @@ def test_photos_hidden_until_done_except_for_owner():
     assert admin_item(pid)["photo_url"]
 
     
+def test_memo_follows_photo_visibility():
+    A = "memo-key-aaaa0001"
+    r = make(37.9800, 127.7100, client_key=A, memo="옹벽 아래 균열이 커지고 있어요", photo_memo="옹벽 균열")
+    pid = r["public_id"]
+    anyone = client.get("/api/reports", params={"ids": pid}).json()[0]
+    assert anyone["memo"] is None and anyone["photos"] == []                 # 사진이 안 보이면 설명도 안 보임
+    assert client.get(f"/api/reports/{pid}").json()["memo"] is None
+    mine = client.get("/api/reports", params={"ids": pid, "client_key": A}).json()[0]
+    assert mine["memo"] == "옹벽 아래 균열이 커지고 있어요"                    # 본인은 그대로
+    finish(pid)
+    done = client.get("/api/reports", params={"ids": pid}).json()[0]
+    assert done["memo"] == "옹벽 아래 균열이 커지고 있어요" and done["photos"][0]["memo"] == "옹벽 균열"   # 조치 완료 뒤에는 공개
+    assert admin_item(pid)["memo"] == "옹벽 아래 균열이 커지고 있어요"        # 담당자 화면은 항상 보임
+
+
 def test_first_review_hours_and_summary():
     from datetime import datetime, timedelta, timezone
     from backend.app import review_time
