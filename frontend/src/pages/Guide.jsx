@@ -41,7 +41,7 @@ export default function Guide() {
         </div>
         <div>
           <h3 className="text-sm font-bold">지금 되는 것</h3>
-          <p className="mt-1 text-sm leading-snug">담당자가 확인한 제보 1건에 10점이 쌓이고, 홈의 안전왕 순위에 반영돼요.</p>
+          <p className="mt-1 text-sm leading-snug">담당자가 확인한 제보 1건에 10점이 쌓이고, 홈의 안전왕 순위에 반영돼요. 이 점수는 순위에만 쓰이고, 포인트로 바꾸는 것은 아직 준비 중이에요.</p>
         </div>
         <div>
           <h3 className="text-sm font-bold">준비 중인 것</h3>
