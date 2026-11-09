@@ -33,6 +33,7 @@
 | 메서드 | 주소 | 설명 |
 | --- | --- | --- |
 | GET | `/api/stats` | 주민 첫 화면 `{week_reports, week_done}`. 이번 주(월요일 0시, 한국 시간)·주민 제보만·체험/오탐 제외 |
+| GET | `/api/ranking?limit=5&client_key=` | 홈 안전왕 순위 `{points_per_report, total_players, top:[{rank, nickname, count, points, title, is_me}], me}`. 제보를 보낸 브라우저(client_key)별로 묶고, **담당자가 확인을 시작한 제보(검토 이후)** 1건당 10점(`constants.POINTS_PER_REPORT`). 접수만·체험·오탐은 세지 않는다. 1등(공동 포함)에게 `title: "안전왕"`. `limit` 1~100(전체 보기는 100). `client_key`를 보내면 `me`에 내 순위가 나온다. 식별값은 응답에 넣지 않는다. 별명은 가장 최근 제보에 적힌 것 |
 | GET | `/api/admin/summary` | 대시보드 `{today_new, overdue_open, done_this_month, avg_days_to_done, open_by_status, on_time, screening}`. `on_time` = 기한 내 조치 시작률 `{on_time, due_total, rate_pct}` (주민·CCTV 제보 중 기한이 지났거나 조치를 시작한 건 대비 기한 안에 조치 시작, 체험용·오탐 제외. 조치 시작 = 상태가 '조치' 또는 '완료'로 처음 바뀜). 공백 후보는 '오늘 신규'·기한에서 제외. `screening` = 데이터 사전 점검 `{facilities_total, facilities, targets, targets_done, ratio_pct, by_rule}` (`docs/benchmark.md`) |
 
 ## 사진
