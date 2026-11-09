@@ -9,7 +9,8 @@ import { myReports } from '../lib/myReports.js'
 
 // 홈 순서: 제보하기 → 우리 동네 안전 소식(건수·유형·최근 조치) → 내 제보 → 처리 과정 → 지도 열기 (멘토링 11/9: 소식을 위로, 지도를 아래로)
 // 상태 색은 지도 범례와 같다 (MapPage COLORS)
-const BUCKETS = [['received', '접수', '#001a47'], ['mid', '검토·조치 중', '#a7430d'], ['done', '조치 완료', '#bfd300']]
+// 홈에는 담당자가 검토를 시작한 제보만 센다(접수만 된 제보는 제외, 11/9 팀장 메모·멘토 피드백). 지도에는 접수 건도 그대로 나온다.
+const BUCKETS = [['mid', '검토·조치 중', '#a7430d'], ['done', '조치 완료', '#bfd300']]
 const bucketOf = (status) => (status === 'done' ? 'done' : status === 'review' || status === 'action' ? 'mid' : 'received')
 const PROCESS = [
   ['접수', '사진을 올리면 바로 접수돼요. AI가 유형을 먼저 봐요.'],
@@ -42,9 +43,10 @@ export default function Home() {
 
   const summary = useMemo(() => {
     if (!features) return null
-    const count = { received: 0, mid: 0, done: 0 }
+    const count = { mid: 0, done: 0 }
     const byType = new Map()
-    features.forEach(({ properties: p }) => {
+    const reviewed = features.filter(({ properties: p }) => bucketOf(p.status) !== 'received')
+    reviewed.forEach(({ properties: p }) => {
       count[bucketOf(p.status)] += 1
       const name = plainCategory(p.category) ?? '기타'
       byType.set(name, (byType.get(name) ?? 0) + 1)
@@ -52,7 +54,7 @@ export default function Home() {
     const types = [...byType.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3)
     const latest = features.filter(({ properties }) => properties.status === 'done')
       .sort((a, b) => b.properties.created_at.localeCompare(a.properties.created_at))[0]?.properties ?? null
-    return { total: features.length, count, types, latest }
+    return { total: reviewed.length, count, types, latest }
   }, [features])
 
   const myLatest = useMemo(() => (mine ?? []).filter((r) => !r.not_target)
@@ -69,15 +71,15 @@ export default function Home() {
         <h2 className="text-lg font-bold">우리 동네 안전 소식</h2>
         {error ? <p className="text-sm text-sub">안전 소식을 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.</p>
           : !summary ? <p role="status" className="text-sm text-sub">불러오는 중이에요.</p>
-          : summary.total === 0 ? <p className="text-sm text-sub">아직 접수된 제보가 없어요. 첫 제보를 남겨 주세요.</p>
+          : summary.total === 0 ? <p className="text-sm text-sub">아직 담당자가 확인한 제보가 없어요. 제보하면 담당자가 확인한 뒤 여기에 나와요.</p>
           : <>
             <article className="resident-card flex flex-col gap-3">
-              <p className="text-sm">우리 동네에서 주민이 알린 위험 <b className="text-xl">{summary.total}건</b></p>
+              <p className="text-sm">주민이 알리고 담당자가 확인한 위험 <b className="text-xl">{summary.total}건</b></p>
               <div className="flex h-3 overflow-hidden rounded-full bg-gray-200" role="img"
                 aria-label={BUCKETS.map(([k, label]) => `${label} ${summary.count[k]}건`).join(', ')}>
                 {BUCKETS.map(([k, , color]) => summary.count[k] > 0 && <span key={k} style={{ width: `${(summary.count[k] / summary.total) * 100}%`, background: color }} />)}
               </div>
-              <ul className="grid grid-cols-3 gap-2 text-center">
+              <ul className="grid grid-cols-2 gap-2 text-center">
                 {BUCKETS.map(([k, label, color]) => (
                   <li key={k} className="flex flex-col items-center gap-0.5">
                     <span className="flex items-center gap-1 text-xs font-semibold"><span className="size-2 rounded-full" style={{ background: color }} />{label}</span>
