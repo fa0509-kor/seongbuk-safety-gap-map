@@ -144,6 +144,9 @@ export default function Report() {
   }[locState]
 
   const photo = index === null ? null : photos[index]
+  // 단계가 바뀌면 맨 위부터 보여 준다. 스크롤이 아래에 남아 있으면 '사진 확인하기'를 누른 자리에 바로 '제보 보내기'가 놓여,
+  // 한 번 더 눌리거나 늦게 눌린 터치가 제보를 보내 버리고 화면이 갑자기 바뀐다(체험용 사진 흐름에서 멘토가 본 튕김).
+  useEffect(() => { document.querySelector('main')?.scrollTo({ top: 0 }) }, [index])
   const locked = busy || uploading
   const go = (next) => {
     setEditingLocation(false)
