@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, object_session, selectinload
 
 from .. import config, departments, scoring, serialize
-from ..constants import (CROSS_CHECK_MIN, KST, NOT_FIXED_MIN, RECENT_DONE_DAYS, RECUR_LOOKBACK_DAYS, STATUSES,
+from ..constants import (CROSS_CHECK_MIN, KST, NOT_FIXED_MIN, RECENT_DONE_DAYS, RECUR_LOOKBACK_DAYS, RESULTS, STATUSES,
                          radius_for)
 from ..db import get_db
 from ..models import Photo, Report, ReportClient, ReportFeedback, ReportLink, ReportPhoto, StatusHistory, now
@@ -100,14 +100,15 @@ def _public(r: Report, client_key: str | None = None) -> dict:
     제보 번호는 지도에 공개돼 있어서, 번호만 알아도 사진을 볼 수 있으면 사실상 모든 제보 사진이 공개되기 때문이다.
     조치 완료된 제보는 누구에게나 사진을 보여 준다(지도의 조치 전·후 보기). 식별값이 없던 옛 제보는 본인 확인이 안 되므로 완료 전에는 사진을 숨긴다.
     AI 공개 검수에서 걸린 사진(얼굴·번호판·부적절·점검과 무관)은 본인 브라우저를 빼고 누구에게도 보이지 않는다(완료된 제보도 같다).
-    config.PUBLIC_PHOTOS_AFTER_AI_CHECK를 켜면 완료 전 제보도 검수를 통과한(ok=True) 사진은 공개한다.
+    config.PUBLIC_PHOTOS_AFTER_AI_CHECK를 켜면 담당자가 확인을 시작한(검토 이후) 제보는 완료 전이어도 검수를 통과한(ok=True) 사진을 공개한다. 접수 상태는 공개하지 않는다.
     설명 글(memo, 사진별 메모)도 사진과 같은 기준이다: 사진이 공개되지 않으면 글도 내보내지 않는다(글에 사진 속 사람·번호판 이야기가 들어갈 수 있어서)."""
     out = serialize.report(r)
     owner = bool(client_key and r.client is not None and r.client.client_key == client_key)
     if owner:
         return out
     done = r.status == "done"
-    if not done and not config.PUBLIC_PHOTOS_AFTER_AI_CHECK:
+    # 담당자가 확인하기 전(접수)의 제보는 사진·설명을 아무에게도 내보내지 않는다(11/9 팀 노션 기준: 확인 대기는 숫자로만 보인다).
+    if r.status == "received" or (not done and not config.PUBLIC_PHOTOS_AFTER_AI_CHECK):
         return out | {"photo_url": None, "after_photo_url": None, "photos": [], "memo": None}   # 설명 글은 사진과 같은 기준으로 공개한다
     mod = _moderation_by_key(r)
     keys = [p.photo_key for p in r.photos] or ([r.photo_key] if r.photo_key else [])
@@ -144,7 +145,8 @@ def reports_map(include_demo: bool = False, db: Session = Depends(get_db)) -> di
     """주민 지도의 '주민 제보 / 조치 완료' 점. 메모·사진은 넣지 않는다 (하단 시트에서 개별 조회).
     공백 탐지 항목(source=gap)은 /api/gaps 레이어로 따로 나가므로 여기서는 주민 제보만."""
     q = select(Report).options(selectinload(Report.feedback)).where(
-        Report.source == "resident", Report.lat.is_not(None), Report.lon.is_not(None), Report.false_positive.is_(False))
+        Report.source == "resident", Report.lat.is_not(None), Report.lon.is_not(None), Report.false_positive.is_(False),
+        Report.status != "received")   # 담당자가 확인하기 전(접수) 제보는 지도에 내지 않는다. 건수는 /api/reports/summary 의 pending
     if not include_demo:
         q = q.where(Report.is_demo.is_(False))
     feats = [{"type": "Feature", "geometry": {"type": "Point", "coordinates": [r.lon, r.lat]},
@@ -165,6 +167,24 @@ def _meters(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     p1, p2 = radians(lat1), radians(lat2)
     a = sin((p2 - p1) / 2) ** 2 + cos(p1) * cos(p2) * sin(radians(lon2 - lon1) / 2) ** 2
     return 2 * 6371000 * asin(sqrt(a))
+
+
+@router.get("/api/reports/summary")
+def reports_summary(limit: int = Query(5, ge=1, le=10), db: Session = Depends(get_db)) -> dict:
+    """홈 '우리 동네 제보 현황'. 위치가 없는 제보도 건수에 넣어야 해서 지도 데이터가 아니라 서버에서 센다.
+    pending(확인 대기)은 숫자만 내보내고, recent(최근 제보)에는 담당자가 확인을 시작한 제보만 넣는다. 체험·오탐·공백 탐지 항목은 뺀다."""
+    rows = db.scalars(select(Report).options(selectinload(Report.result_row)).where(
+        Report.source == "resident", Report.is_demo.is_(False), Report.false_positive.is_(False))
+        .order_by(Report.created_at.desc())).all()
+    count = {s: sum(1 for r in rows if r.status == s) for s in STATUSES}
+    reviewed = [r for r in rows if r.status != "received"]
+    recent = [{"public_id": r.public_id, "category": r.ai_category, "facility_label": departments.facility_label(r.facility_type),
+               "status": r.status, "status_label": STATUSES.get(r.status, r.status),
+               "result": r.result_row.code if r.result_row else None,
+               "result_label": RESULTS.get(r.result_row.code) if r.result_row else None,
+               "created_at": serialize.utc(r.created_at).isoformat()} for r in reviewed[:limit]]
+    return {"pending": count["received"], "review": count["review"], "action": count["action"], "done": count["done"],
+            "reviewed_total": len(reviewed), "recent": recent}
 
 
 @router.get("/api/reports/nearby", response_model=list[NearbyReport])

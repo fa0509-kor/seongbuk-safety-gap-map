@@ -8,9 +8,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from .. import corrections, ledger, review_time, scoring, screening, serialize
-from ..constants import AFTERCARE_RADIUS_M, CATEGORIES, KST, RECHECK_DAYS, STATUSES
+from ..constants import AFTERCARE_RADIUS_M, CATEGORIES, KST, RECHECK_DAYS, RESULTS, STATUSES
 from ..db import get_db
-from ..models import Photo, Report, ReportLink, StatusHistory, now
+from ..models import Photo, Report, ReportLink, ReportResult, StatusHistory, now
 from ..schemas import AdminReportCreate, AdminReportOut, AdminSummary, PlaceHistoryItem, ReportUpdate
 from .reports import _meters, create_report
 
@@ -172,6 +172,12 @@ def update(report_id: int, body: ReportUpdate, db: Session = Depends(get_db)):
     if body.after_photo_key and not db.get(Photo, body.after_photo_key):
         raise HTTPException(400, "after_photo_key에 해당하는 사진이 없음")
 
+    if body.result is not None:
+        if body.result and body.result not in RESULTS:
+            raise HTTPException(400, f"result는 {list(RESULTS)} 중 하나")
+        if body.result and (body.status or r.status) != "done":
+            raise HTTPException(400, "조치 완료 결과는 상태가 '완료'일 때만 고를 수 있음")
+
     if body.true_category is not None:
         if body.true_category and body.true_category not in CATEGORIES:
             raise HTTPException(400, f"true_category는 {CATEGORIES} 중 하나")
@@ -186,6 +192,18 @@ def update(report_id: int, body: ReportUpdate, db: Session = Depends(get_db)):
         if v is not None:
             setattr(r, field, v)
 
+    result_changed = False
+    if body.result is not None:   # 조치 완료 결과: 새 표에 한 건. 빈 문자열이면 지운다
+        current = r.result_row.code if r.result_row else ""
+        if body.result != current:
+            result_changed = True
+            if body.result:
+                if r.result_row:
+                    r.result_row.code = body.result
+                else:
+                    r.result_row = ReportResult(code=body.result)
+            else:
+                r.result_row = None
     changed = body.status is not None and body.status != r.status
     if changed or body.note or body.after_photo_key:
         r.history.append(StatusHistory(from_status=r.status, to_status=body.status or r.status,
@@ -193,7 +211,7 @@ def update(report_id: int, body: ReportUpdate, db: Session = Depends(get_db)):
     if changed:
         r.status = body.status
     # 주민에게 보이는 변화(상태, 메모, 조치 후 사진, 담당 부서 메모)가 있으면 빨간 점 시각을 갱신
-    if changed or body.note or body.after_photo_key or body.dept_note is not None or dept_changed:
+    if changed or body.note or body.after_photo_key or body.dept_note is not None or dept_changed or result_changed:
         r.news_at = now()
     db.commit()
     db.refresh(r)

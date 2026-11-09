@@ -75,6 +75,7 @@ class Report(Base):
     recurrence_link: Mapped[ReportLink | None] = relationship(
         foreign_keys="ReportLink.report_id", back_populates="report", uselist=False, cascade="all, delete-orphan")
     client: Mapped[ReportClient | None] = relationship(back_populates="report", uselist=False, cascade="all, delete-orphan")
+    result_row: Mapped[ReportResult | None] = relationship(back_populates="report", uselist=False, cascade="all, delete-orphan")
 
 
 class ReportPhoto(Base):
@@ -119,6 +120,18 @@ class ReportClient(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
     report: Mapped[Report] = relationship(back_populates="client")
+
+
+class ReportResult(Base):
+    """조치 완료 결과 한 건(보수 완료 / 소유자 안내 / 이상 없음). 새 표라서 서버가 켜질 때 자동으로 만들어진다(기존 표 변경 없음)."""
+    __tablename__ = "report_results"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    report_id: Mapped[int] = mapped_column(ForeignKey("reports.id"), unique=True, index=True)
+    code: Mapped[str] = mapped_column(String(20))                       # constants.RESULTS
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+    report: Mapped[Report] = relationship(back_populates="result_row")
 
 
 class ReportLink(Base):

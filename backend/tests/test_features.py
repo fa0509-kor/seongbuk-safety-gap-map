@@ -185,7 +185,9 @@ def test_공개_검수에서_걸린_사진은_완료된_제보도_숨긴다(monk
     set_mod(True)
     assert client.get(f"/api/reports/{pid}").json()["photo_url"] is None          # 완료 전 + 플래그 꺼짐: 기존 규칙
     monkeypatch.setattr(config, "PUBLIC_PHOTOS_AFTER_AI_CHECK", True)
-    assert client.get(f"/api/reports/{pid}").json()["photo_url"]                  # 완료 전 + 플래그 켜짐 + 통과: 공개
+    assert client.get(f"/api/reports/{pid}").json()["photo_url"] is None          # 접수(담당자 확인 전)는 검수를 통과해도 비공개 (11/9 노션 기준)
+    client.patch(f"/api/admin/reports/{admin(pid)['id']}", json={"status": "review"})
+    assert client.get(f"/api/reports/{pid}").json()["photo_url"]                  # 검토 이후 + 플래그 켜짐 + 통과: 공개
     set_mod(False)
     assert client.get(f"/api/reports/{pid}").json()["photo_url"] is None          # 걸린 사진은 숨김
     mine = client.get("/api/reports", params={"ids": pid, "client_key": "moderation01"}).json()

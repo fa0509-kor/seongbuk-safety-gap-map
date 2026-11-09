@@ -113,6 +113,8 @@ class ReportOut(BaseModel):
     created_at: datetime
     status: str
     status_label: str
+    result: str | None = Field(None, description="조치 완료 결과 코드 (repaired / owner_notified / no_issue)")
+    result_label: str | None = Field(None, description="조치 완료 결과 이름 (보수 완료 / 소유자 안내 / 이상 없음)")
     news_at: datetime = Field(description="주민에게 보이는 변화가 마지막으로 생긴 시각. 브라우저에 저장한 확인 시각보다 늦으면 빨간 점")
     lat: float | None
     lon: float | None
@@ -278,3 +280,4 @@ class ReportUpdate(BaseModel):
     dispatch: bool | None = None
     false_positive: bool | None = None
     true_category: str | None = Field(None, description="담당자가 확인한 실제 유형 (constants.CATEGORIES). 빈 문자열이면 지움")
+    result: str | None = Field(None, description="조치 완료 결과 (constants.RESULTS: repaired / owner_notified / no_issue). 상태가 완료일 때만. 빈 문자열이면 지움")

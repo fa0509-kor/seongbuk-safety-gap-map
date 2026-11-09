@@ -25,13 +25,14 @@
 | GET | `/api/gaps` | (11/2부터 주민 지도에서는 쓰지 않음, 관리자 목록과 통합 점검에만 남김) 소방용수 '점검 필요(규칙)': 소방용수 사용불가 + 거리 기준 초과 의심. GeoJSON `properties: {rule, reason, address, kinds[]}`. **AI가 아니라 규칙 결과** → 화면에 "규칙"으로 표시 |
 | GET | `/api/zones` | 보호구역 경계 (경찰청 API). GeoJSON. 경계가 있으면 `MultiPolygon`, 없으면 `Point`(시설 위치). `properties: {name, kind: 어린이/노인·장애인, has_boundary, point:[경도,위도], address}`. 주민 지도에 얇은 선으로 그림 |
 | GET | `/api/admin/integrated` | 관리자용 통합 점검 후보(같은 주소에 안전시설 2종 이상). 형식은 위와 같음. 공백이 아님 |
-| GET | `/api/reports/map?include_demo=false` | **주민 제보만**. GeoJSON `properties: {public_id, source, status, status_label, category, facility_label, confirm_count, cross_checked, created_at}`. 오탐 제외 |
+| GET | `/api/reports/map?include_demo=false` | **주민 제보 중 담당자가 확인을 시작한 것(검토 이후)만**(접수 상태는 지도에 내지 않음, 11/9 팀 노션 기준). GeoJSON `properties: {public_id, source, status, status_label, category, facility_label, confirm_count, cross_checked, created_at}`. 오탐 제외 |
 
 `/api/facilities`, `/api/gaps`, `/api/admin/integrated` 는 `backend/data/*.geojson` 을 그대로 내보낸다 (`python backend/scripts/build_geojson.py` 로 생성). `/api/zones`는 `backend/data/zones.geojson` (`python backend/scripts/build_zones.py` 로 생성, 원본은 `data/raw/보호구역_성북구.json`).
 
 ## 집계
 | 메서드 | 주소 | 설명 |
 | --- | --- | --- |
+| GET | `/api/reports/summary?limit=5` | 홈 '우리 동네 제보 현황' `{pending, review, action, done, reviewed_total, recent:[{public_id, category, facility_label, status, status_label, result, result_label, created_at}]}`. `pending`(확인 대기)은 **숫자만**, `recent`는 검토 이후 제보만. 위치 없는 제보도 센다. 체험·오탐·공백 탐지 제외 |
 | GET | `/api/stats` | 주민 첫 화면 `{week_reports, week_done}`. 이번 주(월요일 0시, 한국 시간)·주민 제보만·체험/오탐 제외 |
 | GET | `/api/ranking?limit=5&client_key=` | 홈 안전왕 순위 `{points_per_report, total_players, top:[{rank, nickname, count, points, title, is_me}], me}`. 제보를 보낸 브라우저(client_key)별로 묶고, **담당자가 확인을 시작한 제보(검토 이후)** 1건당 10점(`constants.POINTS_PER_REPORT`). 접수만·체험·오탐은 세지 않는다. 1등(공동 포함)에게 `title: "안전왕"`. `limit` 1~100(전체 보기는 100). `client_key`를 보내면 `me`에 내 순위가 나온다. 식별값은 응답에 넣지 않는다. 별명은 가장 최근 제보에 적힌 것 |
 | GET | `/api/admin/summary` | 대시보드 `{today_new, overdue_open, done_this_month, avg_days_to_done, open_by_status, on_time, screening}`. `on_time` = 기한 내 조치 시작률 `{on_time, due_total, rate_pct}` (주민·CCTV 제보 중 기한이 지났거나 조치를 시작한 건 대비 기한 안에 조치 시작, 체험용·오탐 제외. 조치 시작 = 상태가 '조치' 또는 '완료'로 처음 바뀜). 공백 후보는 '오늘 신규'·기한에서 제외. `screening` = 데이터 사전 점검 `{facilities_total, facilities, targets, targets_done, ratio_pct, by_rule}` (`docs/benchmark.md`) |
@@ -99,7 +100,7 @@
 | GET | `/api/admin/ledger.xlsx` | **점검 대장 엑셀**. 목록과 같은 쿼리(`source`, `status`, `category`, `sort`) + `include_demo`(기본 false). 사진·주민 메모는 넣지 않음. 열: 접수번호, 접수일시, 출처, 유형·규칙, AI 신뢰도, 담당 부서, 위치, 위도·경도, 우선순위 점수, 처리 상태, 조치 시작 기한, 기한 초과, 완료일시, 담당자 메모, 주민 확인, 교차확인, 오탐 |
 | POST | `/api/admin/reports` | CCTV 프레임 등 직접 등록. `{photo_key, source: "cctv"/"gap", lat?, lon?, ...}` |
 | GET | `/api/admin/reports/{id}` | 상세 |
-| PATCH | `/api/admin/reports/{id}` | 보낸 항목만 변경: `status, note, after_photo_key, dept, dept_note, dispatch, false_positive, true_category`(실제 유형, 빈 문자열이면 지움). 부서를 바꾸면 이력에 '담당 부서 변경' |
+| PATCH | `/api/admin/reports/{id}` | 보낸 항목만 변경: `status, note, after_photo_key, dept, dept_note, dispatch, false_positive, true_category`(실제 유형, 빈 문자열이면 지움), `result`(조치 완료 결과 `repaired`/`owner_notified`/`no_issue` = 보수 완료/소유자 안내/이상 없음. 상태가 완료일 때만, 빈 문자열이면 지움. `GET /api/meta`의 `results`). 부서를 바꾸면 이력에 '담당 부서 변경' |
 | GET | `/api/admin/report?start=YYYY-MM-DD&end=YYYY-MM-DD` | 기간별 보고서 (한국 날짜, 기본 이번 달). `summary_lines`(고정 양식 문장), `counts`, `by_dept`, `top_open`. 체험 제보 제외 |
 
 - 관리자 응답(`AdminReportOut`) = 주민 응답 + `id, updated_at, source, source_label, dispatch, false_positive, true_category, is_demo, gap_rule, gap_reason, priority`.
@@ -119,6 +120,7 @@
 
 ### 조치 후 관리 (사후 관리)
 - `GET /api/reports/nearby`: 각 항목에 `state`(open｜recent_done｜old_done), `done_days_ago`, `fixed`, `not_fixed` 추가. `accuracy`(폰 위치 정확도 m)를 주면 반경 = 정확도의 1.5배(30~200m).
+- 주민용 제보 응답(`ReportOut`)에 `result`, `result_label`이 있다(완료 결과). 접수 상태 제보는 본인 브라우저 말고는 사진·설명을 내보내지 않는다.
 - `GET /api/reports/map`: 속성 `recheck`(조치 완료인데 '아직 그대로'가 더 많음).
 - `POST /api/reports` 본문에 `accuracy_m` 추가. 같은 곳(반경 안) 180일 이내에 완료된 제보가 있으면 재발로 연결.
 - `GET /api/admin/summary`: `aftercare{reopened, recurred, recheck_due}`.

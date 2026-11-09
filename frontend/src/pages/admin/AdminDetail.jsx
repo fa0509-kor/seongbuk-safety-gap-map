@@ -24,10 +24,11 @@ export default function AdminDetail() {
   const [note, setNote] = useState('')
   const [msg, setMsg] = useState('')
   const [depts, setDepts] = useState([])
+  const [results, setResults] = useState({}) // 조치 완료 결과 이름 (보수 완료 / 소유자 안내 / 이상 없음)
   const [viewer, setViewer] = useState(null) // 크게 보는 사진 {src, title}
 
   useEffect(() => { api.adminReport(id).then(setR).catch((e) => setMsg(e.message)) }, [id])
-  useEffect(() => { api.meta().then((m) => setDepts(m.departments)).catch(() => {}) }, [])
+  useEffect(() => { api.meta().then((m) => { setDepts(m.departments); setResults(m.results ?? {}) }).catch(() => {}) }, [])
 
   async function save(patch) {
     try { setR(await api.adminUpdate(id, patch)); setNote(''); setMsg('저장됨') } catch (e) { setMsg(`실패: ${e.message}`) }
@@ -88,9 +89,21 @@ export default function AdminDetail() {
             {r.dept && !depts.includes(r.dept) && <option value={r.dept}>{r.dept}</option>}
             {depts.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
+          {/* 담당자가 확인하면 주민 지도·홈에 공개된다(접수 상태는 숫자로만 보임) */}
+          {r.status === 'received' && !r.gap_rule && (
+            <button type="button" onClick={() => save({ status: 'review', note: note || null })} className="admin-action self-start">확인 후 공개</button>
+          )}
           <select value={r.status} onChange={(e) => save({ status: e.target.value, note: note || null })} className="rounded border p-1">
             {Object.entries(STATUSES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
+          {r.status === 'done' && (
+            <label className="flex flex-col gap-1 text-xs text-gray-500">조치 결과 (주민 화면에 "시설 + 결함 + 결과"로 보임)
+              <select value={r.result ?? ''} onChange={(e) => save({ result: e.target.value })} className="rounded border p-1 text-sm text-ink">
+                <option value="">선택 안 함</option>
+                {Object.entries(results).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </label>
+          )}
           <label className="text-sm"><input type="checkbox" checked={r.dispatch} onChange={(e) => save({ dispatch: e.target.checked })} /> 현장 출동</label>
           {!r.gap_rule && (
             <label className="flex flex-col gap-1 text-xs text-gray-500">AI와 다르면 실제 유형 (모아 두었다가 나중에 학습·프롬프트 예시에 씁니다)

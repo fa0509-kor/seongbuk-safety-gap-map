@@ -62,6 +62,15 @@
 ## report_links — 재발 연결
 `report_id`(새 제보), `prior_report_id`(이전에 완료된 제보), `days_after_done`, `created_at`. 새 표, 자동 생성.
 
+## report_results — 조치 완료 결과 (11/9 새 표)
+| 열 | 형식 | 설명 |
+| --- | --- | --- |
+| id | 정수 | |
+| report_id | reports.id (유일) | 제보 1건에 결과 1개 |
+| code | 문자열 | `repaired` 보수 완료 / `owner_notified` 소유자 안내 / `no_issue` 이상 없음 (`constants.RESULTS`) |
+| created_at | 시각 | |
+새 표라서 서버가 켜질 때 자동으로 만들어진다(실서버 Supabase에도 따로 할 일 없음, 기존 표 변경 없음).
+
 ## report_clients — 제보를 보낸 브라우저 식별값
 `report_id`(제보당 하나), `client_key`(브라우저가 만든 무작위 값), `nickname`(주민이 정한 별명, 선택, 20자), `created_at`. 같은 브라우저에서 올라온 제보를 담당자가 확인하는 용도다. 사람을 특정하지 못하고(브라우저 데이터 삭제·시크릿 모드·다른 기기면 다른 값), 식별값 자체는 어떤 응답에도 내보내지 않는다. 새 표라서 서버가 켜질 때 자동 생성(ALTER 없음).
 

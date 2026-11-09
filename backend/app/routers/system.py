@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from sqlalchemy import text
 
 from .. import config, db
-from ..constants import CATEGORIES, SOURCES, STATUSES
+from ..constants import CATEGORIES, RESULTS, SOURCES, STATUSES
 from ..departments import DEPARTMENTS, FACILITY_TYPES
 
 router = APIRouter(tags=["system"])
@@ -53,5 +53,5 @@ def health() -> dict:
 @router.get("/api/meta")
 def meta() -> dict:
     """화면에서 쓰는 고정값 (상태·출처·결함 유형 이름)."""
-    return {"statuses": STATUSES, "sources": SOURCES, "categories": CATEGORIES,
+    return {"statuses": STATUSES, "results": RESULTS, "sources": SOURCES, "categories": CATEGORIES,
             "facility_types": {k: v[0] for k, v in FACILITY_TYPES.items()}, "departments": DEPARTMENTS}

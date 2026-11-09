@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import object_session
 
 from . import departments, scoring, storage
-from .constants import CROSS_CHECK_MIN, KST, RECHECK_DAYS, SEASONS, SOURCES, STALE_PHOTO_DAYS, STATUSES
+from .constants import CROSS_CHECK_MIN, KST, RECHECK_DAYS, RESULTS, SEASONS, SOURCES, STALE_PHOTO_DAYS, STATUSES
 from .models import Report, ReportClient
 
 
@@ -107,6 +107,8 @@ def report(r: Report, admin: bool = False, fast_urls: bool = False, times_by_key
         "dept_note": r.dept_note, "confirm_count": r.confirm_count or 0,
         "cross_checked": (r.confirm_count or 0) >= CROSS_CHECK_MIN,
         "not_target": bool(r.false_positive), "photos": photos, "history": history,
+        "result": r.result_row.code if r.result_row else None,
+        "result_label": RESULTS.get(r.result_row.code) if r.result_row else None,
         "aftercare": aftercare(r, admin),
     }
     if admin:

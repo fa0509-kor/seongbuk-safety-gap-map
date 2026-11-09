@@ -26,6 +26,7 @@ export const api = {
   gaps: () => request('/api/gaps'),
   zones: () => request('/api/zones'), // 보호구역 경계 (경계 있는 곳 MultiPolygon, 없는 곳 Point)
   reportsMap: () => request('/api/reports/map'),
+  reportsSummary: (limit = 5) => request(`/api/reports/summary?limit=${limit}`), // 홈 제보 현황: 확인 대기 건수(숫자만), 상태별 건수, 최근 확인된 제보
 
   // 사진: 저장 + AI 분류. 응답 { key, url, ai: { category, confidence, alternatives, reason, mock } }
   uploadPhoto: (blob, { classify = true } = {}) => {
