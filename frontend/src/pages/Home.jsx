@@ -25,6 +25,9 @@ export default function Home() {
   const [viewer, setViewer] = useState(false)   // 조치 전·후 사진 크게 보기
   const [error, setError] = useState(false)
   const [mine, setMine] = useState(null) // 내 제보 (이 브라우저에서 보낸 것)
+  const [rank, setRank] = useState(null) // 안전왕 순위 {top, me, total_players, points_per_report}
+  const [rankAll, setRankAll] = useState(false) // 전체 순위 보기
+  const [rankError, setRankError] = useState(false)
   useEffect(() => {
     api.reportsMap().then(({ features: list }) => {
       setFeatures(list)
@@ -40,6 +43,13 @@ export default function Home() {
     if (ids.length) api.myReports(ids, myReports.clientKey()).then(setMine).catch(() => setMine([]))
     else setMine([])
   }, [])
+
+  // 순위: 처음엔 상위 5명, '전체 순위 보기'를 누르면 100명까지
+  useEffect(() => {
+    let alive = true
+    api.ranking(rankAll ? 100 : 5, myReports.clientKey()).then((r) => alive && setRank(r)).catch(() => alive && setRankError(true))
+    return () => { alive = false }
+  }, [rankAll])
 
   const summary = useMemo(() => {
     if (!features) return null
@@ -123,6 +133,34 @@ export default function Home() {
             <Link to="/my" className="grid min-h-[44px] place-items-center text-sm font-semibold underline">내 제보 모두 보기</Link>
           </>}
       </div>
+
+      <section aria-label="안전왕 순위" className="flex flex-col gap-3.5">
+        <h2 className="text-lg font-bold">우리 동네 안전왕</h2>
+        <article className="resident-card flex flex-col gap-3">
+          <p className="text-xs text-sub">담당자가 확인한 제보 1건에 {rank?.points_per_report ?? 10}점이에요. 제보를 보내기만 해서는 점수가 쌓이지 않아요.</p>
+          {rankError ? <p className="text-sm text-sub">순위를 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.</p>
+            : !rank ? <p role="status" className="text-sm text-sub">불러오는 중이에요.</p>
+            : rank.top.length === 0 ? <p className="text-sm">아직 순위가 없어요. 제보가 확인되면 첫 안전왕이 될 수 있어요.</p>
+            : <ol className="grid gap-1.5">
+              {rank.top.map((row) => (
+                <li key={`${row.rank}-${row.nickname}`} className={`flex min-h-[44px] items-center gap-2.5 rounded-xl px-2.5 ${row.is_me ? 'bg-[#ebefcb]' : ''}`}>
+                  <span className="w-6 shrink-0 text-center text-base font-bold">{row.rank}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">{row.nickname}{row.is_me && <span className="ml-1.5 text-xs font-normal text-sub">(나)</span>}</span>
+                  {row.title && <span className="resident-chip shrink-0 bg-accent text-ink">{row.title}</span>}
+                  <span className="shrink-0 text-sm font-bold">{row.points}점</span>
+                </li>
+              ))}
+            </ol>}
+          {rank?.me && !rank.top.some((row) => row.is_me) && (
+            <p className="rounded-xl bg-[#ebefcb] px-3 py-2.5 text-sm">내 순위 <b>{rank.me.rank}위</b> · {rank.me.points}점 ({rank.me.count}건)</p>
+          )}
+          {rank && rank.total_players > 5 && (
+            <button type="button" onClick={() => setRankAll((v) => !v)} className="grid min-h-[44px] place-items-center text-sm font-semibold underline">
+              {rankAll ? '상위 5명만 보기' : `전체 순위 보기 (${rank.total_players}명)`}
+            </button>
+          )}
+        </article>
+      </section>
 
       <section aria-label="처리 과정" className="rounded-[20px] bg-[#ebefcb] p-3.5">
         <h2 className="text-lg font-bold">제보하면 이렇게 처리돼요</h2>

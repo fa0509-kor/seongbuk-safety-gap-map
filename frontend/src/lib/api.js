@@ -42,6 +42,7 @@ export const api = {
   feedback: (publicId, kind, clientKey) => request(`/api/reports/${publicId}/feedback`, json('POST', { kind, client_key: clientKey })), // 조치 완료 뒤 고쳐졌어요/아직 그대로예요
   report: (publicId) => request(`/api/reports/${publicId}`),
   confirm: (publicId) => request(`/api/reports/${publicId}/confirm`, { method: 'POST' }), // 나도 봤어요 +1
+  ranking: (limit = 5, clientKey) => request(`/api/ranking?limit=${limit}${clientKey ? `&client_key=${encodeURIComponent(clientKey)}` : ''}`), // 안전왕 순위(홈). 식별값은 내 순위를 찾는 데만 쓴다
   stats: () => request('/api/stats'), // 첫 화면 '이번 주 제보·조치 완료'
 
   // 관리자

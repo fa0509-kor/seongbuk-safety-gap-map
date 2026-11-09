@@ -252,6 +252,22 @@ class PublicStats(BaseModel):
     week_done: int = Field(description="이번 주 완료 처리된 주민 제보 수")
 
 
+class RankRow(BaseModel):
+    rank: int
+    nickname: str = Field(description="주민이 정한 별명(실명 아님). 별명이 없으면 '이름 없는 주민'")
+    count: int = Field(description="담당자가 확인을 시작한 제보 수")
+    points: int
+    title: str | None = Field(None, description="1등에게 붙는 이름(안전왕)")
+    is_me: bool = Field(False, description="요청한 브라우저의 순위인가")
+
+
+class RankingOut(BaseModel):
+    points_per_report: int
+    total_players: int
+    top: list[RankRow]
+    me: RankRow | None = Field(None, description="client_key를 보냈고 순위가 있을 때만")
+
+
 class ReportUpdate(BaseModel):
     """관리자 상세에서 바꾸는 값. 보낸 항목만 바뀐다."""
     status: str | None = Field(None, description="received / review / action / done")

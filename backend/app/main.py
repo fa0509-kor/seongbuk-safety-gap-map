@@ -13,14 +13,14 @@ from fastapi.responses import FileResponse
 
 from . import config
 from .db import prepare
-from .routers import admin, mapdata, photos, report, reports, system
+from .routers import admin, mapdata, photos, ranking, report, reports, system
 
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="성북 안전 공백 지도 API", version="0.1.0")
 prepare()  # DB가 잠깐 안 돼도 서버는 뜬다. 원인은 /api/health 의 db_error
 
-for r in (system.router, mapdata.router, photos.router, reports.router, admin.router, report.router):
+for r in (system.router, mapdata.router, photos.router, reports.router, ranking.router, admin.router, report.router):
     app.include_router(r)
 
 
