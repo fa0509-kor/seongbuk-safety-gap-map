@@ -8,6 +8,7 @@ import StatusSteps from '../components/StatusSteps.jsx'
 import { api } from '../lib/api.js'
 import { formatTaken } from '../lib/exif.js'
 import { myReports } from '../lib/myReports.js'
+import { dateTimeText } from '../lib/time.js'
 import { plainCategory } from '../lib/labels.js'
 
 // 주민 4 내 제보: 상태 진행, 조치 전·후 비교, 조치 결과 확인(고쳐졌어요/아직 그대로예요), 재발 안내, 처리 이력, 담당 부서 메모.
@@ -84,6 +85,8 @@ export default function MyReports() {
   const timeline = (r) => r.history
     .filter((h) => h.from_status !== h.to_status || (h.note ?? '').includes('재발'))
     .map((h) => ({ at: h.at, text: h.from_status === h.to_status ? h.note : h.to_status_label }))
+  // 단계별 시각: 접수는 접수한 때, 나머지는 그 상태로 처음 바뀐 때 (건너뛴 단계는 비어 있음)
+  const stepTimes = (r) => Object.fromEntries(['received', 'review', 'action', 'done'].map((k) => [k, k === 'received' ? r.created_at : r.history.find((h) => h.to_status === k)?.at]))
   const chip = (st, notTarget) => (notTarget ? 'bg-gray-200 text-sub' : st === 'done' ? 'bg-[#EBEFCB] text-brand' : st === 'received' ? 'bg-gray-200 text-ink' : 'bg-amber-100 text-amber-800')
   return (
     <section className="resident-screen">
@@ -120,7 +123,7 @@ export default function MyReports() {
             </div>
             {r.not_target
               ? <p className="rounded-lg bg-page px-3 py-2.5 text-sm leading-normal">담당자가 확인한 결과, 처리 대상이 아니라고 판단했습니다.{r.dept_note ? ` 이유: ${r.dept_note}` : ' 이유는 담당 부서에 문의해 주세요.'}</p>
-              : <><StatusSteps status={r.status} /><p className="text-sm font-medium text-brand">{progress(r)}</p></>}
+              : <><StatusSteps status={r.status} times={stepTimes(r)} /><p className="text-sm font-medium text-brand">{progress(r)}</p></>}
             {ac.recurrence && (
               <p className="rounded-lg bg-amber-50 px-3 py-2.5 text-sm leading-normal">같은 곳에서 조치된 지 {ac.recurrence.days_after_done}일 만에 다시 제보된 곳이에요. 재발로 담당자에게 전달됩니다.</p>
             )}
@@ -166,7 +169,7 @@ export default function MyReports() {
                 <summary className="cursor-pointer py-1 font-medium text-brand">처리 이력 보기</summary>
                 <ol className="mt-1.5 flex flex-col gap-1 border-l-2 border-line pl-3">
                   {timeline(r).map((t, i) => (
-                    <li key={i} className="text-[13px] leading-snug"><span className="text-sub">{new Date(t.at).toLocaleDateString('ko-KR')}</span> · {t.text}</li>
+                    <li key={i} className="text-[13px] leading-snug"><span className="text-sub">{dateTimeText(t.at)}</span> · {t.text}</li>
                   ))}
                 </ol>
               </details>
