@@ -1,27 +1,132 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ResidentHeader, { residentAsset } from '../components/ResidentHeader.jsx'
 import BeforeAfter from '../components/BeforeAfter.jsx'
+import StatusSteps from '../components/StatusSteps.jsx'
 import { api } from '../lib/api.js'
 import { plainCategory } from '../lib/labels.js'
+import { myReports } from '../lib/myReports.js'
+
+// 홈 순서: 제보하기 → 우리 동네 안전 소식(건수·유형·최근 조치) → 내 제보 → 처리 과정 → 지도 열기 (멘토링 11/9: 소식을 위로, 지도를 아래로)
+// 상태 색은 지도 범례와 같다 (MapPage COLORS)
+const BUCKETS = [['received', '접수', '#001a47'], ['mid', '검토·조치 중', '#a7430d'], ['done', '조치 완료', '#bfd300']]
+const bucketOf = (status) => (status === 'done' ? 'done' : status === 'review' || status === 'action' ? 'mid' : 'received')
+const PROCESS = [
+  ['접수', '사진을 올리면 바로 접수돼요. AI가 유형을 먼저 봐요.'],
+  ['검토', '담당자가 사진을 보고 처리 대상인지 확인해요.'],
+  ['조치', '담당 부서가 현장을 점검하고 고쳐요.'],
+  ['완료', '조치 전·후 사진과 함께 알려드려요.'],
+]
 
 export default function Home() {
-  const [news, setNews] = useState(null)
+  const [features, setFeatures] = useState(null) // 지도에 올라간 제보 (체험용 제외)
   const [photos, setPhotos] = useState(null) // 최근 조치 완료 제보의 조치 전·후 사진 (둘 다 있을 때만)
   const [error, setError] = useState(false)
+  const [mine, setMine] = useState(null) // 내 제보 (이 브라우저에서 보낸 것)
   useEffect(() => {
-    api.reportsMap().then(({ features }) => {
-      const latest = features.filter(({ properties }) => properties.status === 'done')
-        .sort((a, b) => b.properties.created_at.localeCompare(a.properties.created_at))[0]?.properties ?? null
-      setNews(latest)
+    api.reportsMap().then(({ features: list }) => {
+      setFeatures(list)
+      const latest = list.filter(({ properties }) => properties.status === 'done')
+        .sort((a, b) => b.properties.created_at.localeCompare(a.properties.created_at))[0]?.properties
       // 조치 완료된 제보의 사진은 공개 대상이다 (지도의 조치 전·후 보기와 같다)
       if (latest) api.report(latest.public_id).then((r) => setPhotos(r.photo_url && r.after_photo_url ? { before: r.photo_url, after: r.after_photo_url } : null)).catch(() => {})
     }).catch(() => setError(true))
+    const ids = myReports.ids()
+    if (ids.length) api.myReports(ids, myReports.clientKey()).then(setMine).catch(() => setMine([]))
+    else setMine([])
   }, [])
+
+  const summary = useMemo(() => {
+    if (!features) return null
+    const count = { received: 0, mid: 0, done: 0 }
+    const byType = new Map()
+    features.forEach(({ properties: p }) => {
+      count[bucketOf(p.status)] += 1
+      const name = plainCategory(p.category) ?? '기타'
+      byType.set(name, (byType.get(name) ?? 0) + 1)
+    })
+    const types = [...byType.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3)
+    const latest = features.filter(({ properties }) => properties.status === 'done')
+      .sort((a, b) => b.properties.created_at.localeCompare(a.properties.created_at))[0]?.properties ?? null
+    return { total: features.length, count, types, latest }
+  }, [features])
+
+  const myLatest = useMemo(() => (mine ?? []).filter((r) => !r.not_target)
+    .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0, 2), [mine])
 
   return (
     <section className="resident-screen resident-home">
       <ResidentHeader caption="우리 동네 안전 체크!" title="성북 안전 공백 지도" />
+      <Link to="/report" className="resident-primary flex items-center justify-center gap-2">
+        <img src={residentAsset('home-imgCamera1.svg')} alt="" />사진으로 제보하기
+      </Link>
+
+      <div className="flex flex-col gap-3.5">
+        <h2 className="text-lg font-bold">우리 동네 안전 소식</h2>
+        {error ? <p className="text-sm text-sub">안전 소식을 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.</p>
+          : !summary ? <p role="status" className="text-sm text-sub">불러오는 중이에요.</p>
+          : summary.total === 0 ? <p className="text-sm text-sub">아직 접수된 제보가 없어요. 첫 제보를 남겨 주세요.</p>
+          : <>
+            <article className="resident-card flex flex-col gap-3">
+              <p className="text-sm">우리 동네에서 주민이 알린 위험 <b className="text-xl">{summary.total}건</b></p>
+              <div className="flex h-3 overflow-hidden rounded-full bg-gray-200" role="img"
+                aria-label={BUCKETS.map(([k, label]) => `${label} ${summary.count[k]}건`).join(', ')}>
+                {BUCKETS.map(([k, , color]) => summary.count[k] > 0 && <span key={k} style={{ width: `${(summary.count[k] / summary.total) * 100}%`, background: color }} />)}
+              </div>
+              <ul className="grid grid-cols-3 gap-2 text-center">
+                {BUCKETS.map(([k, label, color]) => (
+                  <li key={k} className="flex flex-col items-center gap-0.5">
+                    <span className="flex items-center gap-1 text-xs font-semibold"><span className="size-2 rounded-full" style={{ background: color }} />{label}</span>
+                    <span className="text-lg font-bold">{summary.count[k]}건</span>
+                  </li>
+                ))}
+              </ul>
+              {summary.types.length > 0 && <div className="border-t border-line pt-3">
+                <h3 className="text-xs font-semibold text-sub">많이 알려진 위험</h3>
+                <ul className="mt-1.5 grid gap-1">
+                  {summary.types.map(([name, n]) => <li key={name} className="flex justify-between text-sm"><span>{name}</span><b>{n}건</b></li>)}
+                </ul>
+              </div>}
+            </article>
+            {summary.latest && <article className="resident-card">
+              <span className="resident-chip bg-[#e5f4ec] text-[#166548]">최근 조치 완료</span>
+              <h3 className="mt-2 font-bold">{plainCategory(summary.latest.category) ?? '주민 제보'} 조치 완료</h3>
+              <p className="mt-2 text-xs text-sub">주민 제보로 발견한 위험을 정리했어요.</p>
+              {photos && <div className="mt-3"><BeforeAfter before={photos.before} after={photos.after} /></div>}
+            </article>}
+          </>}
+      </div>
+
+      <div className="flex flex-col gap-3.5">
+        <h2 className="text-lg font-bold">내 제보는 어디까지 왔나요?</h2>
+        {mine === null ? <p role="status" className="text-sm text-sub">불러오는 중이에요.</p>
+          : myLatest.length === 0 ? <p className="text-sm text-sub">제보를 보내면 여기에서 처리 단계를 바로 볼 수 있어요.</p>
+          : <>
+            {myLatest.map((r) => (
+              <article key={r.public_id} className="resident-card flex flex-col gap-2.5">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="font-bold">{plainCategory(r.ai?.category) ?? '분류 없음'}{r.facility_label && ` · ${r.facility_label}`}</span>
+                  <span className="shrink-0 text-xs text-sub">{new Date(r.created_at).toLocaleDateString('ko-KR')}</span>
+                </div>
+                <StatusSteps status={r.status} />
+              </article>
+            ))}
+            <Link to="/my" className="grid min-h-[44px] place-items-center text-sm font-semibold underline">내 제보 모두 보기</Link>
+          </>}
+      </div>
+
+      <section aria-label="처리 과정" className="rounded-[20px] bg-[#ebefcb] p-3.5">
+        <h2 className="text-lg font-bold">제보하면 이렇게 처리돼요</h2>
+        <ol className="mt-3 grid gap-2.5">
+          {PROCESS.map(([title, text], i) => (
+            <li key={title} className="flex items-start gap-3">
+              <span className="grid size-7 shrink-0 place-items-center rounded-full bg-brand text-sm font-bold text-white">{i + 1}</span>
+              <p className="text-sm leading-snug"><b>{title}</b> · {text}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
       <Link to="/map" className="rounded-[20px] bg-[#ebefcb] p-3.5">
         <span className="rounded-full bg-white px-2.5 py-1.5 text-[11px] font-bold">성북구 · 지도 예시</span>
         <h2 className="my-3 text-lg font-bold">내 주변에 어떤 제보가 있나요?</h2>
@@ -33,20 +138,9 @@ export default function Home() {
             </span>
           ))}
         </div>
-        <span className="mt-2.5 flex items-center justify-between text-sm font-bold">동네 지도 열기<img src={residentAsset('home-imgChev.svg')} alt="" /></span>
+        <span className="mt-2.5 flex items-center justify-between text-sm font-bold">지도에서 다른 제보 보기<img src={residentAsset('home-imgChev.svg')} alt="" /></span>
+        <span className="mt-1 block text-xs text-sub">제보 위치와 처리 상황을 지도로 볼 수 있어요.</span>
       </Link>
-      <Link to="/report" className="resident-primary flex items-center justify-center gap-2">
-        <img src={residentAsset('home-imgCamera1.svg')} alt="" />사진으로 제보하기
-      </Link>
-      <h2 className="text-lg font-bold">우리 동네 소식</h2>
-      <article className="resident-card">
-        {news ? <>
-          <span className="resident-chip bg-[#e5f4ec] text-[#166548]">조치 완료</span>
-          <h3 className="mt-2 font-bold">{plainCategory(news.category) ?? '주민 제보'} 조치 완료</h3>
-          <p className="mt-2 text-xs text-sub">주민 제보로 발견한 위험을 정리했어요.</p>
-          {photos && <div className="mt-3"><BeforeAfter before={photos.before} after={photos.after} /></div>}
-        </> : <p className="text-sm text-sub">{error ? '동네 소식을 불러오지 못했어요.' : '최근 조치 완료 소식이 여기에 표시돼요.'}</p>}
-      </article>
     </section>
   )
 }
