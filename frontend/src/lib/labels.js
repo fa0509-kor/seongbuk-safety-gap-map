@@ -7,6 +7,8 @@ const PLAIN = {
   '철근 노출': '철근이 드러남',
 }
 
+// 지도 필터에 쓰는 유형 목록 (분류가 없는 제보는 '기타'로 본다)
+export const PLAIN_CATEGORIES = [...Object.values(PLAIN), '기타']
 export const plainCategory = (category) => PLAIN[category] ?? category
 
 // AI가 쓴 설명 문장 안의 용어도 같은 말로 바꾼다 (긴 말부터 바꿔 겹치지 않게). 뒤에 붙은 조사(가/이, 은/는 …)는 바뀐 말에 맞춘다.
