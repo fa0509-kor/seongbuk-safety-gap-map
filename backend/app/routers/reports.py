@@ -177,7 +177,7 @@ def reports_summary(limit: int = Query(5, ge=1, le=10), db: Session = Depends(ge
         Report.source == "resident", Report.is_demo.is_(False), Report.false_positive.is_(False))
         .order_by(Report.created_at.desc())).all()
     count = {s: sum(1 for r in rows if r.status == s) for s in STATUSES}
-    reviewed = [r for r in rows if r.status != "received"]
+    reviewed = sorted((r for r in rows if r.status != "received"), key=lambda r: serialize.utc(r.news_at), reverse=True)   # 최근에 상태·결과가 바뀐 제보부터
     recent = [{"public_id": r.public_id, "category": r.ai_category, "facility_label": departments.facility_label(r.facility_type),
                "status": r.status, "status_label": STATUSES.get(r.status, r.status),
                "result": r.result_row.code if r.result_row else None,
