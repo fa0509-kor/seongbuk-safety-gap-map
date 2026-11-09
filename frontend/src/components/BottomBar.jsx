@@ -9,7 +9,7 @@ const tabs = [
   ['/home', '홈', 'Home'],
   ['/map', '동네 지도', 'Map'],
   ['/report', '제보하기', 'Camera'],
-  ['/my', '마이페이지', 'List'],
+  ['/my', '내 활동', 'List'],
 ]
 
 export default function BottomBar() {

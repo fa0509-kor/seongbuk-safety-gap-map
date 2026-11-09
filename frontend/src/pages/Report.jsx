@@ -169,11 +169,11 @@ export default function Report() {
         <ResidentHeader caption="체험 제보" title="체험이 끝났어요" />
         <div className="resident-card grid gap-2">
           <h2 className="text-lg font-bold">사진 고르기부터 보내기까지 해 보셨어요</h2>
-          <p className="text-sm leading-snug">체험 제보는 지도와 순위에는 나오지 않고, 담당자 화면에서만 확인돼요. 실제 제보는 직접 찍은 사진으로 보내 주세요.</p>
+          <p className="text-sm leading-snug">실제로는 이렇게 담당자에게 전달돼요. 체험 제보는 지도와 순위에는 나오지 않고 담당자 화면에서만 확인돼요. 실제 제보는 직접 찍은 사진으로 보내 주세요.</p>
         </div>
         <div className="mt-auto grid gap-2 pt-2">
           <Link to="/report" className="resident-primary grid place-items-center">실제로 제보하기</Link>
-          <Link to="/my" className="grid min-h-[52px] place-items-center rounded-[15px] border border-sub font-bold">내 제보에서 처리 단계 보기</Link>
+          <Link to="/my" className="grid min-h-[52px] place-items-center rounded-[15px] border border-sub font-bold">내 활동에서 처리 단계 보기</Link>
           <Link to="/home" className="grid min-h-[44px] place-items-center text-sm font-semibold underline">홈으로</Link>
         </div>
       </section>

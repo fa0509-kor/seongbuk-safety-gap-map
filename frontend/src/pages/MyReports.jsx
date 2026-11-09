@@ -23,6 +23,14 @@ export default function MyReports() {
   const [error, setError] = useState('')
   const [voteMsg, setVoteMsg] = useState({})
   const loaded = useRef(false)
+  const [spots, setSpots] = useState(null) // 학생 활동 카드: 지도 데이터로 센 값 {recheck, crowded}
+  useEffect(() => {
+    api.reportsMap().then(({ features }) => {
+      const cells = new Map() // 약 200m 칸으로 나눠 제보가 3건 이상 몰린 곳을 센다
+      features.forEach(({ geometry: { coordinates: [lon, lat] } }) => { const k = `${Math.round(lat / 0.002)}:${Math.round(lon / 0.002)}`; cells.set(k, (cells.get(k) ?? 0) + 1) })
+      setSpots({ recheck: features.filter(({ properties }) => properties.recheck).length, crowded: [...cells.values()].filter((n) => n >= 3).length })
+    }).catch(() => setSpots(null))
+  }, [])
   const [score, setScore] = useState(undefined) // 내 점수·순위 (undefined: 불러오는 중, null: 아직 순위 없음)
   useEffect(() => {
     api.ranking(1, myReports.clientKey()).then((r) => setScore(r.me ?? null)).catch(() => setScore(null))
@@ -91,7 +99,7 @@ export default function MyReports() {
   return (
     <section className="resident-screen">
       <PhotoModal src={viewer?.src} title={viewer?.title} onClose={() => setViewer(null)} />
-      <ResidentHeader caption="내 제보와 내 점수" title="마이페이지" />
+      <ResidentHeader caption="내 제보 · 내 점수 · 학생 활동" title="내 활동" />
       <div className="relative min-h-[129px] overflow-hidden rounded-[20px] bg-[#ebefcb] p-4">
         <img src={residentAsset('my-img.png')} alt="" className="absolute right-3 top-2 size-[112px] object-contain" />
         <p className="relative text-[13px] font-semibold text-sub">내가 보낸 제보</p>
@@ -106,6 +114,27 @@ export default function MyReports() {
         </span>
         <span className="shrink-0 text-xs font-bold underline">서비스 안내 · 포인트와 봉사시간</span>
       </Link>
+      <section aria-label="학생이 할 수 있는 일" className="rounded-[20px] bg-[#ebefcb] p-3.5">
+        <h2 className="text-base font-bold">학생이 할 수 있는 일</h2>
+        <p className="mt-1 text-xs text-sub">모인 제보 중에서 학생이 직접 도울 수 있는 일을 골라 두었어요.</p>
+        <ul className="mt-3 grid gap-2.5">
+          <li className="rounded-xl bg-white p-3">
+            <h3 className="text-sm font-bold">조치 후 재확인</h3>
+            <p className="mt-0.5 text-xs leading-snug text-sub">고쳐졌다고 한 곳에 다시 가서 사진으로 확인해요.</p>
+            <Link to="/map?filter=recheck" className="mt-1 grid min-h-[44px] items-center text-sm font-bold underline">{spots ? `재확인이 필요한 곳 ${spots.recheck}곳 보기` : '지도에서 재확인이 필요한 곳 보기'}</Link>
+          </li>
+          <li className="rounded-xl bg-white p-3">
+            <h3 className="text-sm font-bold">봉사 순찰</h3>
+            <p className="mt-0.5 text-xs leading-snug text-sub">제보가 적은 골목을 돌며 위험한 곳을 찾아요.</p>
+            <Link to="/report" className="mt-1 grid min-h-[44px] items-center text-sm font-bold underline">발견하면 제보하기</Link>
+          </li>
+          <li className="rounded-xl bg-white p-3">
+            <h3 className="text-sm font-bold">주의 안내</h3>
+            <p className="mt-0.5 text-xs leading-snug text-sub">제보가 몰린 곳에 미끄럼·통행 주의 안내를 해요. 구청이 허가한 범위 안에서만 해요.</p>
+            <Link to="/map" className="mt-1 grid min-h-[44px] items-center text-sm font-bold underline">{spots ? `제보가 많은 곳 ${spots.crowded}곳 보기` : '지도에서 제보가 많은 곳 보기'}</Link>
+          </li>
+        </ul>
+      </section>
       {!list.length && <p className="resident-card text-sm text-sub">아직 이 브라우저에서 보낸 제보가 없어요.</p>}
       {list.map((r) => {
         const ac = r.aftercare ?? { fixed: 0, not_fixed: 0, recurrence: null }

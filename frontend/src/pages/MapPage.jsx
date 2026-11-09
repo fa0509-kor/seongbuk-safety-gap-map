@@ -1,5 +1,6 @@
 import ResidentHeader, { residentAsset } from '../components/ResidentHeader.jsx'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { api } from '../lib/api.js'
@@ -25,7 +26,8 @@ export default function MapPage() {
   const map = useRef(null)
   const layer = useRef(null)
   const [reports, setReports] = useState([])
-  const [filter, setFilter] = useState('all')
+  const [params] = useSearchParams()
+  const [filter, setFilter] = useState(['review', 'action', 'done', 'recheck'].includes(params.get('filter')) ? params.get('filter') : 'all') // 내 활동의 '재확인 필요한 곳'에서 바로 들어오는 길
   const [cat, setCat] = useState('all') // 유형 필터
   const [selected, setSelected] = useState(null)
   const [confirmMsg, setConfirmMsg] = useState('')
