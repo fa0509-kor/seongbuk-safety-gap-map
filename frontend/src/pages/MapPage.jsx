@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { api } from '../lib/api.js'
-import { plainCategory, PLAIN_CATEGORIES } from '../lib/labels.js'
+import { plainCategory, plainText, PLAIN_CATEGORIES } from '../lib/labels.js'
 import { addBaseLayer } from '../lib/map.js'
 import PhotoViewer from '../components/PhotoViewer.jsx'
 import { myReports } from '../lib/myReports.js'
@@ -30,7 +30,7 @@ export default function MapPage() {
   const [cat, setCat] = useState('all') // 유형 필터
   const [selected, setSelected] = useState(null)
   const [confirmMsg, setConfirmMsg] = useState('')
-  const [shots, setShots] = useState({ before: null, after: null }) // 선택한 제보의 조치 전·후 사진 (눌렀을 때 불러옴)
+  const [shots, setShots] = useState({ before: null, after: null, memo: null, loaded: false }) // 선택한 제보의 조치 전·후 사진 (눌렀을 때 불러옴)
   const [viewer, setViewer] = useState(false)
   const [view, setView] = useState({ zoom: 14, bounds: null }) // 확대·이동할 때마다 갱신 → 묶음과 '이 지역 N건'을 다시 계산
 
@@ -117,11 +117,11 @@ export default function MapPage() {
   const p = selected?.properties
   // 마커를 누르면 그 제보의 사진 주소를 불러온다 (지도 응답에는 사진을 싣지 않아 가볍게 유지)
   useEffect(() => {
-    setShots({ before: null, after: null }); setViewer(false)
+    setShots({ before: null, after: null, memo: null, loaded: false }); setViewer(false)
     if (!p?.public_id) return undefined
     // 어떤 사진을 보여 줄지는 서버가 정한다: 조치 완료 제보의 사진, 그리고 서버 설정을 켰을 때 AI 공개 검수를 통과한 사진. 내 제보는 내 브라우저에서 모두 보인다
     let alive = true
-    api.myReports([p.public_id], myReports.clientKey()).then((list) => { if (alive && list[0]) setShots({ before: list[0].photo_url ?? null, after: list[0].after_photo_url ?? null }) }).catch(() => {})
+    api.myReports([p.public_id], myReports.clientKey()).then((list) => { if (alive && list[0]) setShots({ before: list[0].photo_url ?? null, after: list[0].after_photo_url ?? null, memo: list[0].photos?.[0]?.memo ?? list[0].memo ?? null, loaded: true }) }).catch(() => {})
     return () => { alive = false }
   }, [p?.public_id]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
@@ -183,6 +183,10 @@ export default function MapPage() {
               </div>
             )}
           </div>
+          {shots.memo && <p className="text-[13px] leading-snug">{plainText(shots.memo)}</p>}
+          {shots.loaded && !shots.before && !shots.after && !shots.memo && p.status !== 'done' && (
+            <p className="text-xs text-sub">이 제보의 사진과 설명은 아직 공개되지 않았어요. 조치가 끝나면 볼 수 있어요.</p>
+          )}
           {p.recheck && <p className="rounded-lg bg-amber-50 px-3 py-2 text-[13px] leading-snug">조치 완료 뒤에도 '아직 그대로'라는 주민 의견이 더 많은 곳이에요. 담당자가 다시 확인합니다.</p>}
           {p.status !== 'done' && (
             <button type="button" disabled={myReports.confirmed(p.public_id) || myReports.ids().includes(p.public_id)}
