@@ -1,4 +1,4 @@
-"""지도에서 조치 완료 전 제보의 사진 공개: AI 검수를 통과한 것만 공개하고, 걸렸거나 검수를 못 한 것은 공개하지 않는다(설명 글도 사진과 같이)."""
+"""지도에서 조치 완료 전 제보의 사진 공개: 담당자가 확인(검토 이후)했고 AI 검수에 걸리지 않은 것만 공개한다. 접수 상태·걸린 사진은 공개하지 않는다(설명 글도 사진과 같이)."""
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
@@ -46,7 +46,7 @@ def test_default_is_on_and_only_passed_photos_are_public(monkeypatch):
     a, b, c = seen(ok["public_id"]), seen(bad["public_id"]), seen(none["public_id"])
     assert a["photo_url"] and a["photos"] and a["memo"] == "옹벽 균열이 있어요"      # 통과: 사진과 설명 공개
     assert b["photo_url"] is None and b["photos"] == [] and b["memo"] is None       # 걸림: 미공개
-    assert c["photo_url"] is None and c["photos"] == [] and c["memo"] is None       # 검수 못 함: 안전하게 미공개
+    assert c["photo_url"] and c["photos"] and c["memo"] == "검수 못 한 사진"          # 검수 못 함: 담당자가 확인(검토)했으니 공개
     mine = client.get("/api/reports", params={"ids": bad["public_id"], "client_key": A}).json()[0]
     assert mine["photo_url"] and mine["memo"]                                       # 걸린 사진도 본인에게는 보임
 
