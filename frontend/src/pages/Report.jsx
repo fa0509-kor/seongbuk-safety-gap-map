@@ -50,6 +50,7 @@ export default function Report() {
   const [busy, setBusy] = useState(false)           // 제보 보내는 중
   const sending = useRef(false)                      // 연달아 눌러도 한 번만 보낸다 (busy는 다음 화면 그리기 전에는 아직 false라서 빠르게 두 번 누르면 제보가 두 건 만들어졌다)
   const [error, setError] = useState('')
+  const [demoDone, setDemoDone] = useState(false)   // 체험 제보를 보낸 뒤 보여 주는 '체험 완료' 화면
   const [draftBack, setDraftBack] = useState(false) // 임시저장을 불러온 상태
   const [draftReady, setDraftReady] = useState(false)
 
@@ -113,11 +114,12 @@ export default function Report() {
   const removePhoto = (i) => setPhotos((l) => l.filter((_, k) => k !== i))                    // 대표를 지우면 다음 사진이 대표가 됨
   const makeMain = (i) => setPhotos((l) => [l[i], ...l.filter((_, k) => k !== i)])           // 가장 문제가 잘 보이는 사진을 대표로
 
-  // 체험용 사진 3장(sample.jpg, sample2.jpg, sample3.jpg). 첫 장이 없으면 오류, 나머지가 없으면 있는 것만 붙인다.
-  async function useDemoPhoto() {
-    const res = await Promise.all(['sample.jpg', 'sample2.jpg', 'sample3.jpg'].map((f) => fetch('/demo/' + f)))
-    if (!res[0].ok) return setError('체험용 사진이 아직 없음 (frontend/public/demo/sample.jpg)')
-    addFiles(await Promise.all(res.filter((r) => r.ok).map((r) => r.blob())))
+  // 체험용 사진 3장 중 한 장을 골라 붙인다 (사진 고르기 → 확인 → 보내기 순서를 그대로 해 보게). 파일: frontend/public/demo/sample.jpg, sample2.jpg, sample3.jpg
+  const demoFile = (n) => (n === 1 ? 'sample.jpg' : `sample${n}.jpg`)
+  async function useDemoPhoto(n) {
+    const res = await fetch('/demo/' + demoFile(n))
+    if (!res.ok) return setError(`체험용 사진이 아직 없음 (frontend/public/demo/${demoFile(n)})`)
+    addFiles([await res.blob()])
   }
 
   async function submit() {
@@ -136,7 +138,8 @@ export default function Report() {
       if (!isDemo) myReports.clearDraft()
       myReports.add(r.public_id)
       myReports.markSeen() // 방금 보낸 제보는 '새 소식'이 아님 → 빨간 점은 담당자가 처리할 때부터
-      navigate('/my')
+      if (isDemo) setDemoDone(true) // 체험은 끝났다는 화면을 먼저 보여 준다 (바로 내 제보로 넘기면 화면이 갑자기 바뀐 것처럼 보임)
+      else navigate('/my')
     } catch (e) { sending.current = false; setError(`제보 실패: ${e.message}`) } finally { setBusy(false) } // 성공하면 화면이 넘어갈 때까지 잠가 둔다(바로 풀면 넘어가기 직전에 한 번 더 눌린다)
   }
 
@@ -159,6 +162,22 @@ export default function Report() {
   const choose = (e) => {
     if (e.target.files.length) addFiles(e.target.files)
     e.target.value = ''
+  }
+  if (demoDone) {
+    return (
+      <section className="resident-screen min-h-full">
+        <ResidentHeader caption="체험 제보" title="체험이 끝났어요" />
+        <div className="resident-card grid gap-2">
+          <h2 className="text-lg font-bold">사진 고르기부터 보내기까지 해 보셨어요</h2>
+          <p className="text-sm leading-snug">체험 제보는 지도와 순위에는 나오지 않고, 담당자 화면에서만 확인돼요. 실제 제보는 직접 찍은 사진으로 보내 주세요.</p>
+        </div>
+        <div className="mt-auto grid gap-2 pt-2">
+          <Link to="/report" className="resident-primary grid place-items-center">실제로 제보하기</Link>
+          <Link to="/my" className="grid min-h-[52px] place-items-center rounded-[15px] border border-sub font-bold">내 제보에서 처리 단계 보기</Link>
+          <Link to="/home" className="grid min-h-[44px] place-items-center text-sm font-semibold underline">홈으로</Link>
+        </div>
+      </section>
+    )
   }
   return (
     <section className="resident-screen min-h-full">
@@ -248,7 +267,17 @@ export default function Report() {
         <div className="resident-card grid gap-2">
           <h2 className="text-lg font-bold">사진 추가</h2>
           <p className="text-sm text-sub">여러 장을 한 번에 고를 수 있어요. 최대 {MAX_PHOTOS}장</p>
-          {isDemo ? <button type="button" onClick={useDemoPhoto} disabled={locked || photos.length > 0} className="resident-primary">체험용 사진 불러오기</button>
+          {isDemo ? <div className="grid gap-2">
+              <p className="text-sm font-semibold">체험용 사진 중 한 장을 골라 주세요</p>
+              <div className="grid grid-cols-3 gap-2">
+                {[1, 2, 3].map((n) => (
+                  <button key={n} type="button" onClick={() => useDemoPhoto(n)} disabled={locked || photos.length > 0} aria-label={`체험용 사진 ${n} 고르기`}
+                    className="overflow-hidden rounded-xl border border-line disabled:opacity-45">
+                    <img src={`/demo/${demoFile(n)}`} alt="" className="h-[96px] w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            </div>
             : <div className="grid grid-cols-2 gap-2">
               <label className="resident-primary grid cursor-pointer place-items-center text-center text-sm focus-within:outline">사진 찍기
                 <input type="file" accept="image/*" capture="environment" disabled={locked || photos.length >= MAX_PHOTOS} onChange={choose} className="sr-only" />
