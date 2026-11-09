@@ -134,7 +134,7 @@ export default function Home() {
       <section aria-label="안전왕 순위" className="flex flex-col gap-3.5">
         <h2 className="text-lg font-bold">우리 동네 안전왕</h2>
         <article className="resident-card flex flex-col gap-3">
-          <p className="text-xs text-sub">담당자가 확인한 제보 1건에 {rank?.points_per_report ?? 10}점이에요. 제보를 보내기만 해서는 점수가 쌓이지 않아요.</p>
+          <p className="text-xs text-sub">담당자가 확인한 제보 1건에 {rank?.points_per_report ?? 10}점이에요. 제보를 보내기만 해서는 점수가 쌓이지 않아요. 점수는 순위에만 쓰이고, 포인트 교환은 준비 중이에요.</p>
           {rankError ? <p className="text-sm text-sub">순위를 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.</p>
             : !rank ? <p role="status" className="text-sm text-sub">불러오는 중이에요.</p>
             : rank.top.length === 0 ? <p className="text-sm">아직 순위가 없어요. 제보가 확인되면 첫 안전왕이 될 수 있어요.</p>

@@ -27,7 +27,8 @@ def list_reports(source: str | None = None, status: str | None = None, category:
 
 def _filtered(db: Session, source, status, category, include_demo, sort, season=None, search="") -> list[dict]:
     q = select(Report).options(selectinload(Report.history), selectinload(Report.photo), selectinload(Report.photos),
-                               selectinload(Report.feedback), selectinload(Report.recurrence_link), selectinload(Report.client))
+                               selectinload(Report.feedback), selectinload(Report.recurrence_link), selectinload(Report.client),
+                               selectinload(Report.result_row))  # 완료 결과도 한 번에 (제보마다 따로 조회하면 목록이 느려짐)
     if source:
         q = q.where(Report.source == source)
     if status:

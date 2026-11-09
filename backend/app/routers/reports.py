@@ -80,7 +80,8 @@ def _link_recurrence(db: Session, r: Report, accuracy_m: float | None) -> None:
 
 def _q():
     return select(Report).options(selectinload(Report.history), selectinload(Report.photo), selectinload(Report.photos),
-                                  selectinload(Report.feedback), selectinload(Report.recurrence_link), selectinload(Report.client))
+                                  selectinload(Report.feedback), selectinload(Report.recurrence_link), selectinload(Report.client),
+                                  selectinload(Report.result_row))  # 완료 결과도 한 번에 (제보마다 따로 조회하면 느려짐)
 
 
 def _moderation_by_key(r: Report) -> dict[str, bool | None]:

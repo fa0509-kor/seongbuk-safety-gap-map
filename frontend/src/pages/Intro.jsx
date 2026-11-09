@@ -52,7 +52,7 @@ export default function Intro() {
               </li>
             ))}
           </ol>
-          <p className="mt-3 text-xs leading-relaxed text-sub">접수된 제보는 지도에서 누구나 처리 상황을 볼 수 있어요.</p>
+          <p className="mt-3 text-xs leading-relaxed text-sub">담당자가 확인한 제보는 지도에서 누구나 처리 상황을 볼 수 있어요.</p>
         </section>
         {stats && <section aria-label="이번 주 우리 동네" className="mt-3 rounded-[20px] border border-line bg-white px-3.5 py-4">
           <h2 className="text-sm font-bold">이번 주 우리 동네</h2>
