@@ -136,7 +136,7 @@ export default function Report() {
       myReports.add(r.public_id)
       myReports.markSeen() // 방금 보낸 제보는 '새 소식'이 아님 → 빨간 점은 담당자가 처리할 때부터
       navigate('/my')
-    } catch (e) { setError(`제보 실패: ${e.message}`) } finally { sending.current = false; setBusy(false) }
+    } catch (e) { sending.current = false; setError(`제보 실패: ${e.message}`) } finally { setBusy(false) } // 성공하면 화면이 넘어갈 때까지 잠가 둔다(바로 풀면 넘어가기 직전에 한 번 더 눌린다)
   }
 
   const locText = {
