@@ -137,12 +137,15 @@ export default function MapPage() {
             </button>
           ))}
         </div>
-        <div role="group" aria-label="위험 유형" className="-mx-6 flex gap-2 overflow-x-auto px-6 pb-0.5 [scrollbar-width:none]">
-          {[['all', '모든 유형'], ...PLAIN_CATEGORIES.map((c) => [c, c])].map(([k, label]) => (
-            <button key={k} type="button" aria-pressed={cat === k} onClick={() => { setCat(k); setSelected(null) }}
-              className={`min-h-[44px] shrink-0 whitespace-nowrap rounded-full px-3.5 text-[13px] font-bold ${cat === k ? 'bg-brand text-white' : 'border border-line bg-[#ebefcb] text-ink'}`}>{label}</button>
-          ))}
-        </div>
+        <label className="relative block">
+          <span className="sr-only">위험 유형</span>
+          <select value={cat} onChange={(e) => { setCat(e.target.value); setSelected(null) }}
+            className="min-h-[48px] w-full appearance-none rounded-xl border border-line bg-white py-2 pl-3.5 pr-10 text-[15px] font-bold text-ink">
+            <option value="all">모든 위험 유형</option>
+            {PLAIN_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <span aria-hidden="true" className="pointer-events-none absolute right-4 top-1/2 size-2.5 -translate-y-[70%] rotate-45 border-b-2 border-r-2 border-ink" />
+        </label>
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-line bg-white px-3 py-2 text-[11px] font-bold">
         <div className="flex items-center gap-1"><span className="h-2 w-2 rounded-full border-2 border-red-600" style={{ background: COLORS.done }} />빨간 테두리 = 조치 후 재확인 필요</div>
