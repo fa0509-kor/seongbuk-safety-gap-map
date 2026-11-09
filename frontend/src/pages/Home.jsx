@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ResidentHeader, { residentAsset } from '../components/ResidentHeader.jsx'
-import BeforeAfter from '../components/BeforeAfter.jsx'
+import PhotoViewer from '../components/PhotoViewer.jsx'
 import StatusSteps from '../components/StatusSteps.jsx'
 import { api } from '../lib/api.js'
 import { plainCategory } from '../lib/labels.js'
@@ -20,16 +20,20 @@ const PROCESS = [
 
 export default function Home() {
   const [features, setFeatures] = useState(null) // 지도에 올라간 제보 (체험용 제외)
-  const [photos, setPhotos] = useState(null) // 최근 조치 완료 제보의 조치 전·후 사진 (둘 다 있을 때만)
+  const [featured, setFeatured] = useState(null) // 최근 조치 완료 제보 중 조치 전·후 사진이 둘 다 있는 것 {category, before, after}
+  const [viewer, setViewer] = useState(false)   // 조치 전·후 사진 크게 보기
   const [error, setError] = useState(false)
   const [mine, setMine] = useState(null) // 내 제보 (이 브라우저에서 보낸 것)
   useEffect(() => {
     api.reportsMap().then(({ features: list }) => {
       setFeatures(list)
-      const latest = list.filter(({ properties }) => properties.status === 'done')
-        .sort((a, b) => b.properties.created_at.localeCompare(a.properties.created_at))[0]?.properties
-      // 조치 완료된 제보의 사진은 공개 대상이다 (지도의 조치 전·후 보기와 같다)
-      if (latest) api.report(latest.public_id).then((r) => setPhotos(r.photo_url && r.after_photo_url ? { before: r.photo_url, after: r.after_photo_url } : null)).catch(() => {})
+      // 최근 조치 완료 8건 중 조치 전·후 사진이 모두 있는 첫 제보를 '조치 사진 확인하기'에 쓴다 (조치 완료 제보의 사진은 공개 대상이다, 지도의 조치 전·후 보기와 같다)
+      const doneIds = list.filter(({ properties }) => properties.status === 'done')
+        .sort((a, b) => b.properties.created_at.localeCompare(a.properties.created_at)).slice(0, 8).map(({ properties }) => properties.public_id)
+      if (doneIds.length) api.myReports(doneIds).then((rows) => {
+        const pair = doneIds.map((id) => rows.find((r) => r.public_id === id)).find((r) => r?.photo_url && r?.after_photo_url)
+        if (pair) setFeatured({ category: pair.ai?.category, before: pair.photo_url, after: pair.after_photo_url })
+      }).catch(() => {})
     }).catch(() => setError(true))
     const ids = myReports.ids()
     if (ids.length) api.myReports(ids, myReports.clientKey()).then(setMine).catch(() => setMine([]))
@@ -88,12 +92,15 @@ export default function Home() {
                 </ul>
               </div>}
             </article>
-            {summary.latest && <article className="resident-card">
+            {summary.latest && <article className="resident-card flex items-center justify-between gap-3">
+              <div className="min-w-0">
               <span className="resident-chip bg-[#e5f4ec] text-[#166548]">최근 조치 완료</span>
-              <h3 className="mt-2 font-bold">{plainCategory(summary.latest.category) ?? '주민 제보'} 조치 완료</h3>
+              <h3 className="mt-2 font-bold">{plainCategory(featured?.category ?? summary.latest.category) ?? '주민 제보'} 조치 완료</h3>
               <p className="mt-2 text-xs text-sub">주민 제보로 발견한 위험을 정리했어요.</p>
-              {photos && <div className="mt-3"><BeforeAfter before={photos.before} after={photos.after} /></div>}
+            </div>
+            {featured && <button type="button" onClick={() => setViewer(true)} className="min-h-[56px] shrink-0 rounded-xl bg-brand px-3.5 text-[13px] font-bold leading-tight text-white">조치 사진<br />확인하기</button>}
             </article>}
+            {viewer && featured && <PhotoViewer before={featured.before} after={featured.after} onClose={() => setViewer(false)} />}
           </>}
       </div>
 
