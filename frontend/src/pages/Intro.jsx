@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { residentAsset } from '../components/ResidentHeader.jsx'
+import { api } from '../lib/api.js'
 
 // 쓰는 방법을 그림 세 컷으로 보여 준다 (멘토: 사용 방법이 이미지로 보이면 이해가 훨씬 쉽다).
 // 선 그림은 남색 2px 선 + 연두 포인트. 그라데이션·그림자 없이 평평하게.
@@ -11,6 +13,8 @@ const STEPS = [
 ]
 
 export default function Intro() {
+  const [stats, setStats] = useState(null) // 이번 주 제보·조치 완료 건수 (실패하면 이 칸만 숨김)
+  useEffect(() => { api.stats().then(setStats).catch(() => {}) }, [])
   return (
     <main className="mx-auto flex min-h-full max-w-[402px] flex-col bg-page">
       {/* 급할 때 바로 걸 수 있게 맨 위에 둔다 */}
@@ -50,6 +54,15 @@ export default function Intro() {
           </ol>
           <p className="mt-3 text-xs leading-relaxed text-sub">접수된 제보는 지도에서 누구나 처리 상황을 볼 수 있어요.</p>
         </section>
+        {stats && <section aria-label="이번 주 우리 동네" className="mt-3 rounded-[20px] border border-line bg-white px-3.5 py-4">
+          <h2 className="text-sm font-bold">이번 주 우리 동네</h2>
+          {stats.week_reports + stats.week_done === 0
+            ? <p className="mt-2 text-sm text-sub">이번 주 첫 제보를 기다리고 있어요.</p>
+            : <div className="mt-2 grid grid-cols-2 gap-3 text-center">
+              <p><span className="block text-2xl font-bold">{stats.week_reports}건</span><span className="text-xs text-sub">새로 접수된 제보</span></p>
+              <p><span className="block text-2xl font-bold">{stats.week_done}건</span><span className="text-xs text-sub">조치 완료</span></p>
+            </div>}
+        </section>}
       </div>
     </main>
   )
