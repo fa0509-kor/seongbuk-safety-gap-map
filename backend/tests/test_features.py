@@ -181,6 +181,7 @@ def test_공개_검수에서_걸린_사진은_완료된_제보도_숨긴다(monk
             ph.ai = {**ph.ai, "moderation": {"checked": True, "ok": ok, "flags": [] if ok else ["person"]}}
             db.commit()
 
+    monkeypatch.setattr(config, "PUBLIC_PHOTOS_AFTER_AI_CHECK", False)           # 기본값은 11/9부터 켜짐이라 꺼진 경우를 따로 시험한다
     set_mod(True)
     assert client.get(f"/api/reports/{pid}").json()["photo_url"] is None          # 완료 전 + 플래그 꺼짐: 기존 규칙
     monkeypatch.setattr(config, "PUBLIC_PHOTOS_AFTER_AI_CHECK", True)

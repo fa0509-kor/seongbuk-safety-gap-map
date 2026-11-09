@@ -188,7 +188,7 @@ export default function MapPage() {
           </div>
           {shots.memo && <p className="text-[13px] leading-snug">{plainText(shots.memo)}</p>}
           {shots.loaded && !shots.before && !shots.after && !shots.memo && p.status !== 'done' && (
-            <p className="text-xs text-sub">이 제보의 사진과 설명은 아직 공개되지 않았어요. 조치가 끝나면 볼 수 있어요.</p>
+            <p className="text-xs text-sub">이 제보의 사진과 설명은 공개되지 않았어요. 부적절한 내용이 있는지 검수를 통과하지 못했거나 아직 확인 중이에요.</p>
           )}
           {p.recheck && <p className="rounded-lg bg-amber-50 px-3 py-2 text-[13px] leading-snug">조치 완료 뒤에도 '아직 그대로'라는 주민 의견이 더 많은 곳이에요. 담당자가 다시 확인합니다.</p>}
           {p.status !== 'done' && (
