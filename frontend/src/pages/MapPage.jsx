@@ -9,14 +9,13 @@ import PhotoViewer from '../components/PhotoViewer.jsx'
 import { myReports } from '../lib/myReports.js'
 import { groupPoints, MAX_CLUSTER_ZOOM } from '../lib/cluster.js'
 
-// 주민 3 지도. 필터: 상태(전체·접수·검토 조치 중·조치 완료·재확인 필요)와 유형을 눌러서 고른다. 검색창은 없앴다(멘토·팀장 11/9). 소방용수 '점검 필요' 점은 주민이 신경 쓰는 정보가 아니라(멘토 지적) 이 화면에서 뺐고 관리자 목록에만 남김 (docs/decisions.md). 하단 시트에 선택 항목 요약.
+// 주민 3 지도. 필터: 상태(전체·검토 중·조치 중·조치 완료·재확인 필요)와 유형을 눌러서 고른다. 검색창은 없앴다(멘토·팀장 11/9). 소방용수 '점검 필요' 점은 주민이 신경 쓰는 정보가 아니라(멘토 지적) 이 화면에서 뺐고 관리자 목록에만 남김 (docs/decisions.md). 하단 시트에 선택 항목 요약.
 // 배경 타일 설정은 lib/map.js (OSM 표준 타일, 출처 표기 필수)
 const CENTER = [37.5894, 127.0167]
 const COLORS = { received: '#001a47', review: '#a7430d', action: '#a7430d', done: '#bfd300' }
-// 상태 필터 겸 범례: 점 색은 지도 핀 색과 같다
-const STATUS_FILTERS = [['all', '전체', null], ['received', '접수', COLORS.received], ['mid', '검토·조치 중', COLORS.review], ['done', '조치 완료', COLORS.done], ['recheck', '조치 후 재확인 필요', '#dc2626']]
-const statusMatch = (p, key) => (key === 'all' ? true : key === 'recheck' ? !!p.recheck : key === 'done' ? p.status === 'done'
-  : key === 'mid' ? p.status === 'review' || p.status === 'action' : p.status === 'received')
+// 상태 필터 겸 범례: 점 색은 지도 핀 색과 같다. 지도에는 담당자가 확인을 시작한 제보만 나온다(접수 상태는 홈에 '확인 대기 N건'으로만, 11/9 팀 노션 기준)
+const STATUS_FILTERS = [['all', '전체', null], ['review', '검토 중', COLORS.review], ['action', '조치 중', COLORS.action], ['done', '조치 완료', COLORS.done], ['recheck', '조치 후 재확인 필요', '#dc2626']]
+const statusMatch = (p, key) => (key === 'all' ? true : key === 'recheck' ? !!p.recheck : p.status === key)
 const catName = (p) => plainCategory(p.category) ?? '기타'
 // 멀리서 보면 가까운 제보를 숫자 원으로 묶고, 확대하면 낱개로 풀린다 (lib/cluster.js)
 const toLatLng = (f) => [f.geometry.coordinates[1], f.geometry.coordinates[0]]
@@ -130,7 +129,7 @@ export default function MapPage() {
   return (
     <section className="resident-screen">
       <ResidentHeader caption="성북구 주민 제보" title="동네 지도" />
-      <p className="text-sm leading-snug text-sub">주민이 알린 위험이 지도에 표시돼요. 핀을 누르면 처리 상황을 볼 수 있어요.</p>
+      <p className="text-sm leading-snug text-sub">주민이 올린 제보가 지금 어디까지 처리됐는지 보여요. 담당자가 확인한 제보만 나오고, 핀을 누르면 자세히 볼 수 있어요.</p>
       <div className="grid gap-2">
         <div role="group" aria-label="처리 상태" className="-mx-6 flex gap-2 overflow-x-auto px-6 pb-0.5 [scrollbar-width:none]">
           {STATUS_FILTERS.map(([k, label, color]) => (
